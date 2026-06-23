@@ -111,20 +111,17 @@ def get_demographic_data(url_demographic, client):
                 
                 df_perca['MES_NUM'] = df_perca['MES_CORTE'].apply(mes_to_num)
                 
-                # Filtrar último mes
+                # Identificar mes de corte más reciente para métricas
                 max_anio = df_perca['ANIO_NUM'].max()
                 max_mes = df_perca[df_perca['ANIO_NUM'] == max_anio]['MES_NUM'].max()
                 
                 dem_data['max_anio_percapita'] = int(max_anio)
                 dem_data['max_mes_percapita'] = int(max_mes)
                 
-                df_perca_latest = df_perca[
-                    (df_perca['ANIO_NUM'] == max_anio) & 
-                    (df_perca['MES_NUM'] == max_mes)
-                ].copy()
-                
-                df_perca_latest['ESTA_PERCAPITADO'] = "SI"
-                dem_data['percapita'] = df_perca_latest[['RUT_CLEAN', 'ESTA_PERCAPITADO']]
+                # Usar registros únicos de toda la historia para no generar brechas falsas
+                df_perca_unique = df_perca.drop_duplicates(subset=['RUT_CLEAN']).copy()
+                df_perca_unique['ESTA_PERCAPITADO'] = "SI"
+                dem_data['percapita'] = df_perca_unique[['RUT_CLEAN', 'ESTA_PERCAPITADO']]
         except: pass
 
         # 3. Rescates Manuales desde el archivo externo
