@@ -115,6 +115,9 @@ def get_demographic_data(url_demographic, client):
                 max_anio = df_perca['ANIO_NUM'].max()
                 max_mes = df_perca[df_perca['ANIO_NUM'] == max_anio]['MES_NUM'].max()
                 
+                dem_data['max_anio_percapita'] = int(max_anio)
+                dem_data['max_mes_percapita'] = int(max_mes)
+                
                 df_perca_latest = df_perca[
                     (df_perca['ANIO_NUM'] == max_anio) & 
                     (df_perca['MES_NUM'] == max_mes)
@@ -142,6 +145,25 @@ def get_demographic_data(url_demographic, client):
                     dem_data['percapita'] = pd.concat([dem_data['percapita'], df_rescates[['RUT_CLEAN', 'ESTA_PERCAPITADO']]]).drop_duplicates(subset=['RUT_CLEAN'])
                 else:
                     dem_data['percapita'] = df_rescates[['RUT_CLEAN', 'ESTA_PERCAPITADO']]
+                    
+            # 3.5 Bajas Manuales
+            try:
+                ws_bajas = sheet_rescates.worksheet("bajas_percapita")
+                data_bajas = ws_bajas.get_all_records()
+                df_bajas = pd.DataFrame(data_bajas)
+                dem_data['bajas_crudas'] = df_bajas.copy()
+                
+                if not df_bajas.empty and 'RUT' in df_bajas.columns:
+                    df_bajas['RUT_CLEAN'] = df_bajas['RUT'].apply(normalize_rut)
+                    df_bajas['ESTA_PERCAPITADO'] = "SI" # Trick to remove from pending
+                    
+                    if not dem_data['percapita'].empty:
+                        dem_data['percapita'] = pd.concat([dem_data['percapita'], df_bajas[['RUT_CLEAN', 'ESTA_PERCAPITADO']]]).drop_duplicates(subset=['RUT_CLEAN'])
+                    else:
+                        dem_data['percapita'] = df_bajas[['RUT_CLEAN', 'ESTA_PERCAPITADO']]
+            except gspread.exceptions.WorksheetNotFound:
+                dem_data['bajas_crudas'] = pd.DataFrame()
+
         except Exception as e:
             print(f"Error leyendo rescates manuales: {e}")
     except: pass
@@ -252,11 +274,10 @@ def get_rescate_data(config):
         cols_deseadas = ['RUT', 'RUT_CLEAN', 'NOMBRE_PACIENTE', 'TELEFONO', 'EDAD_ACTUAL', 'GENERO',
                          'SECTOR', 'POLICLINICO', 'NOMBRE_PROFESIONAL', 'PROFESION', 'FECHA_AGENDADA', 'HORA_AGENDADA', 'MOTIVO_CONSULTA']
         cols_existentes = [c for c in cols_deseadas if c in df_rescate.columns]
-        return df_rescate[cols_existentes]
-        
+        return df_rescate[cols_existentes], dem_info
     except Exception as e:
-        st.error(f"Error cargando datos: {e}")
-        return pd.DataFrame()
+        st.error(f"Error en datos: {e}")
+        return pd.DataFrame(), {}
 
 # -----------------------------------------------------------------------------
 # 2. INTERFAZ DE USUARIO (VISUALIZACIÓN)
@@ -728,7 +749,9 @@ st.markdown("""
 
 # Carga de datos
 with st.spinner("🔄 Cruzando bases de datos en tiempo real..."):
-    df_rescate = get_rescate_data(APP_CONFIG)
+    df_rescate, dem_info = get_rescate_data(APP_CONFIG)
+    APP_CONFIG['datos']['rescates_crudos'] = dem_info.get('rescates_crudos', pd.DataFrame())
+    APP_CONFIG['datos']['bajas_crudas'] = dem_info.get('bajas_crudas', pd.DataFrame())
 
 if df_rescate.empty:
     st.balloons()
@@ -1137,13 +1160,28 @@ else:
                         centro = st.selectbox("Centro de Salud", opciones_centro, index=idx_centro)
                         rut_val = st.text_input("RUT", value=paciente_data['RUT'], disabled=True)
                     with c_f2:
+                        # Valores dinámicos del per cápita más reciente
+                        def_anio = dem_info.get('max_anio_percapita', datetime.now().year)
+                        def_mes_num = dem_info.get('max_mes_percapita', datetime.now().month)
+                        
                         meses_dict = {1:"Enero",2:"Febrero",3:"Marzo",4:"Abril",5:"Mayo",6:"Junio",7:"Julio",8:"Agosto",9:"Septiembre",10:"Octubre",11:"Noviembre",12:"Diciembre"}
-                        anio = st.number_input("Año de Corte", value=datetime.now().year, min_value=2020)
-                        mes = st.selectbox("Mes de Corte", list(meses_dict.values()), index=datetime.now().month - 1)
+                        anio = st.number_input("Año de Corte", value=int(def_anio), min_value=2020)
+                        
+                        idx_mes = def_mes_num - 1 if 0 <= def_mes_num - 1 < 12 else 0
+                        mes = st.selectbox("Mes de Corte", list(meses_dict.values()), index=int(idx_mes))
                     
-                    obs = st.text_area("Observaciones (Ej: Inscrito Fonasa, No contesta, Cambio domicilio)")
+                    categoria = st.selectbox("Categoría de Gestión*", [
+                        "Inscrito Exitosamente", 
+                        "Cambio de Domicilio", 
+                        "Inscrito en Otro Centro", 
+                        "Fallecido", 
+                        "No Contesta / Inubicable",
+                        "Rechaza Inscripción",
+                        "Otro"
+                    ])
+                    obs = st.text_area("Detalles Adicionales (Opcional)")
                     
-                    if st.form_submit_button("Confirmar Rescate", type="primary", use_container_width=True):
+                    if st.form_submit_button("Confirmar Rescate/Gestión", type="primary", use_container_width=True):
                         try:
                             scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
                             creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
@@ -1151,16 +1189,28 @@ else:
                             
                             url_rescates = st.secrets["URL_RESCATES"]
                             sheet_rescates = client_gs.open_by_url(url_rescates)
-                            ws_rescates = sheet_rescates.worksheet("percapita")
                             
-                            # NOMBRES NOMBRE_CENTRO RUT ANIO_CORTE MES_CORTE OBS FECHA_RESCATE USUARIO_GESTOR
                             fecha_rescate = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                             usuario_gestor = MASTER_ACCOUNT_ID
                             
-                            row = [nombre, centro, rut_val, anio, mes, obs, fecha_rescate, usuario_gestor]
-                            ws_rescates.append_row(row)
+                            # Logica de hoja destino
+                            target_sheet_name = "percapita" if categoria == "Inscrito Exitosamente" else "bajas_percapita"
                             
-                            st.success(f"✅ ¡Paciente {nombre} ({rut_val}) registrado como rescatado!")
+                            try:
+                                ws_target = sheet_rescates.worksheet(target_sheet_name)
+                            except gspread.exceptions.WorksheetNotFound:
+                                ws_target = sheet_rescates.add_worksheet(title=target_sheet_name, rows="1000", cols="10")
+                                ws_target.append_row(["NOMBRES", "NOMBRE_CENTRO", "RUT", "ANIO_CORTE", "MES_CORTE", "CATEGORIA", "OBSERVACION", "FECHA_RESCATE", "USUARIO_GESTOR"])
+                            
+                            if target_sheet_name == "percapita":
+                                observacion_final = f"[{categoria}] {obs}" if obs else categoria
+                                row = [nombre, centro, rut_val, anio, mes, observacion_final, fecha_rescate, usuario_gestor]
+                            else:
+                                row = [nombre, centro, rut_val, anio, mes, categoria, obs, fecha_rescate, usuario_gestor]
+                                
+                            ws_target.append_row(row)
+                            
+                            st.success(f"✅ ¡Paciente {nombre} ({rut_val}) registrado en la categoría '{categoria}'!")
                             st.cache_data.clear()
                             time.sleep(2)
                             st.rerun()
@@ -1225,8 +1275,27 @@ else:
                 fig_tiempo.update_traces(textposition="top center", line_color='#00A8E8', marker=dict(size=10, color="#FFB703"))
                 st.plotly_chart(fig_tiempo, use_container_width=True)
                 
-            with st.expander("📄 Ver Datos de Rescates (Crudos)"):
+            with st.expander("📄 Ver Datos de Rescates Exitosos (Crudos)"):
                 st.dataframe(df_rescates_raw, use_container_width=True)
+                
+        df_bajas_raw = APP_CONFIG['datos'].get('bajas_crudas', pd.DataFrame())
+        if not df_bajas_raw.empty:
+            st.markdown("#### 🚫 Bajas y Pacientes No Inscritos")
+            st.info("Pacientes que se acercaron al centro pero no pudieron ser inscritos en el per cápita. Estos pacientes ya han sido removidos de las brechas.")
+            
+            c1_b, c2_b = st.columns(2)
+            with c1_b:
+                st.metric(label="Total Bajas Registradas", value=len(df_bajas_raw))
+                
+            with c2_b:
+                if 'CATEGORIA' in df_bajas_raw.columns:
+                    df_cats = df_bajas_raw['CATEGORIA'].value_counts().reset_index()
+                    df_cats.columns = ['CATEGORIA', 'CANTIDAD']
+                    fig_cats = px.pie(df_cats, names='CATEGORIA', values='CANTIDAD', hole=0.4)
+                    st.plotly_chart(fig_cats, use_container_width=True)
+                    
+            with st.expander("📄 Ver Datos de Bajas (Crudos)"):
+                st.dataframe(df_bajas_raw, use_container_width=True)
 
 # --- FOOTER (REPLICADO EXACTO DE APP BASE) ---
 st.markdown("---")
