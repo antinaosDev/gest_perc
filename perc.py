@@ -1221,12 +1221,58 @@ else:
 
     with tab5:
         st.markdown("### 🏆 Métricas y Rendimiento de Rescates")
-        st.info("Indicadores de gestión y rendimiento del equipo de rescate.")
+        st.info("Indicadores de gestión y rendimiento del equipo de rescate por periodo de evaluación.")
         
-        df_rescates_raw = APP_CONFIG['datos'].get('rescates_crudos', pd.DataFrame())
+        df_rescates_raw = APP_CONFIG['datos'].get('rescates_crudos', pd.DataFrame()).copy()
+        df_bajas_raw = APP_CONFIG['datos'].get('bajas_crudas', pd.DataFrame()).copy()
+        
+        # Filtros por defecto desde la última base percapita
+        def_anio = int(dem_info.get('max_anio_percapita', datetime.now().year))
+        def_mes_num = int(dem_info.get('max_mes_percapita', datetime.now().month))
+        meses_dict = {1:"Enero",2:"Febrero",3:"Marzo",4:"Abril",5:"Mayo",6:"Junio",7:"Julio",8:"Agosto",9:"Septiembre",10:"Octubre",11:"Noviembre",12:"Diciembre"}
+        def_mes_nombre = meses_dict.get(def_mes_num, "Enero")
+        
+        c_f1, c_f2 = st.columns(2)
+        
+        anios_disp = [def_anio]
+        meses_disp = [def_mes_nombre]
+        
+        if not df_rescates_raw.empty and 'ANIO_CORTE' in df_rescates_raw.columns:
+            anios_disp.extend(df_rescates_raw['ANIO_CORTE'].dropna().unique().tolist())
+            meses_disp.extend(df_rescates_raw['MES_CORTE'].dropna().astype(str).str.title().unique().tolist())
+            
+        anios_limpios = []
+        for a in anios_disp:
+            try:
+                anios_limpios.append(int(float(a)))
+            except:
+                pass
+        anios_disp = sorted(list(set(anios_limpios)))
+        meses_disp = sorted(list(set([str(m).strip() for m in meses_disp if str(m).strip().lower() != 'nan'])))
+        
+        with c_f1:
+            filtro_anio = st.selectbox("Año de Evaluación", anios_disp, index=anios_disp.index(def_anio) if def_anio in anios_disp else 0)
+        with c_f2:
+            filtro_mes = st.selectbox("Mes de Evaluación", meses_disp, index=meses_disp.index(def_mes_nombre) if def_mes_nombre in meses_disp else 0)
+            
+        if not df_rescates_raw.empty and 'ANIO_CORTE' in df_rescates_raw.columns and 'MES_CORTE' in df_rescates_raw.columns:
+            df_rescates_raw['ANIO_CORTE_NUM'] = pd.to_numeric(df_rescates_raw['ANIO_CORTE'], errors='coerce')
+            df_rescates_raw['MES_CORTE_STR'] = df_rescates_raw['MES_CORTE'].astype(str).str.title().str.strip()
+            df_rescates_raw = df_rescates_raw[
+                (df_rescates_raw['ANIO_CORTE_NUM'] == filtro_anio) & 
+                (df_rescates_raw['MES_CORTE_STR'] == filtro_mes)
+            ]
+            
+        if not df_bajas_raw.empty and 'ANIO_CORTE' in df_bajas_raw.columns and 'MES_CORTE' in df_bajas_raw.columns:
+            df_bajas_raw['ANIO_CORTE_NUM'] = pd.to_numeric(df_bajas_raw['ANIO_CORTE'], errors='coerce')
+            df_bajas_raw['MES_CORTE_STR'] = df_bajas_raw['MES_CORTE'].astype(str).str.title().str.strip()
+            df_bajas_raw = df_bajas_raw[
+                (df_bajas_raw['ANIO_CORTE_NUM'] == filtro_anio) & 
+                (df_bajas_raw['MES_CORTE_STR'] == filtro_mes)
+            ]
         
         if df_rescates_raw.empty:
-            st.warning("Aún no hay registros manuales de rescates para mostrar métricas.")
+            st.warning(f"Aún no hay registros manuales de rescates para el periodo {filtro_mes} {filtro_anio}.")
         else:
             if 'FECHA_RESCATE' in df_rescates_raw.columns:
                 df_rescates_raw['FECHA_RESCATE_DT'] = pd.to_datetime(df_rescates_raw['FECHA_RESCATE'], errors='coerce')
@@ -1241,7 +1287,7 @@ else:
             
             c1, c2, c3 = st.columns(3)
             with c1:
-                st.metric(label="Total Rescates Históricos", value=total_rescates)
+                st.metric(label="Total Rescates en el Periodo", value=total_rescates)
             with c2:
                 st.metric(label="Rescates Este Mes", value=rescates_este_mes)
             with c3:
@@ -1278,7 +1324,6 @@ else:
             with st.expander("📄 Ver Datos de Rescates Exitosos (Crudos)"):
                 st.dataframe(df_rescates_raw, use_container_width=True)
                 
-        df_bajas_raw = APP_CONFIG['datos'].get('bajas_crudas', pd.DataFrame())
         if not df_bajas_raw.empty:
             st.markdown("#### 🚫 Bajas y Pacientes No Inscritos")
             st.info("Pacientes que se acercaron al centro pero no pudieron ser inscritos en el per cápita. Estos pacientes ya han sido removidos de las brechas.")
