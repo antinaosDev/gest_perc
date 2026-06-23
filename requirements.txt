@@ -9,3 +9,4 @@ xlsxwriter
 altair
 requests
 polars
+pytz
