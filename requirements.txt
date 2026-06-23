@@ -8,3 +8,4 @@ chardet
 xlsxwriter
 altair
 requests
+polars
