@@ -199,53 +199,52 @@ def load_app_configuration(account_id):
                     break
             
             if cuenta_val == account_id:
-                # Keep the first occurrence of each header to avoid being overwritten by duplicates
+                # Store all occurrences of each header to avoid data loss from duplicate columns
                 target_row = {}
                 for i, h in enumerate(headers):
                     h_upper = h.upper()
                     if h_upper not in target_row:
-                        target_row[h_upper] = row_padded[i]
+                        target_row[h_upper] = [row_padded[i]]
+                    else:
+                        target_row[h_upper].append(row_padded[i])
                 break
         if not target_row:
             config['mensaje'] = "Cuenta no encontrada."
             return config
 
-        if str(target_row.get('ESTADO_APP', '')).upper() != 'ACTIVO':
+        def get_last_non_empty(key, default=''):
+            vals = target_row.get(key.upper(), [])
+            for val in reversed(vals):
+                if str(val).strip() != '':
+                    return str(val).strip()
+            return default
+
+        if get_last_non_empty('ESTADO_APP').upper() != 'ACTIVO':
             config['mensaje'] = "Cuenta desactivada."
             return config
 
-        config['datos']['URL_SHEET'] = str(target_row.get('URL_SHEET', '')).strip()
-        config['datos']['URL_DATOS_DEM'] = str(target_row.get('DATOS_DEM', '')).strip()
+        config['datos']['URL_SHEET'] = get_last_non_empty('URL_SHEET')
+        config['datos']['URL_DATOS_DEM'] = get_last_non_empty('DATOS_DEM')
         
-        plataforma_encontrada = ""
-        for key, val in target_row.items():
-            if str(key).strip().upper() == 'PLATAFORMA':
-                plataforma_encontrada = str(val).strip()
-                break
-        config['plataforma'] = plataforma_encontrada
+        # Combine all Plataforma columns so if any contains 'Percapita', we find it
+        plataformas = target_row.get('PLATAFORMA', [])
+        config['plataforma'] = " ".join(str(v).strip() for v in plataformas)
         
         config['debug_keys'] = list(target_row.keys())
-        config['debug_vals'] = list(target_row.values())
+        config['debug_vals'] = [str(v) for v in target_row.values()]
         
-        # Búsqueda robusta de la clave para evitar problemas con espacios en los headers
-        clave_encontrada = 'percapita_ch_2025'
-        for key, val in target_row.items():
-            if key == 'CLAVE_PLATAFORMA':
-                if str(val).strip() != '':
-                    clave_encontrada = str(val).strip()
-                break
-        config['clave'] = clave_encontrada
+        # Búsqueda robusta de la clave 
+        config['clave'] = get_last_non_empty('CLAVE_PLATAFORMA', 'percapita_ch_2025')
         
-        cred_raw = target_row.get('CREDENTIAL_DICT', '')
+        cred_raw = get_last_non_empty('CREDENTIAL_DICT')
         if isinstance(cred_raw, str) and len(cred_raw) > 10:
             try: config['credenciales'] = json.loads(cred_raw)
             except: config['credenciales'] = BOOTSTRAP_CREDS
         else: config['credenciales'] = BOOTSTRAP_CREDS
 
         # === CARGA DE IMÁGENES EXACTAMENTE COMO EN LA APP BASE ===
-        # Usamos los mismos nombres de claves para mantener compatibilidad
-        url_logo_alain = str(target_row.get('LOGO_ALAIN', '')).strip() 
-        url_logo_noti = str(target_row.get('LOGO_NOTI', '')).strip()    
+        url_logo_alain = get_last_non_empty('LOGO_ALAIN') 
+        url_logo_noti = get_last_non_empty('LOGO_NOTI')    
         
         if len(url_logo_alain) < 5: url_logo_alain = DEFAULT_LOGO_ALAIN
         if len(url_logo_noti) < 5: url_logo_noti = DEFAULT_LOGO_NOTI
