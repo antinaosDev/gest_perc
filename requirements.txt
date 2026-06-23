@@ -1,0 +1,10 @@
+streamlit
+pandas
+numpy
+gspread
+google-auth
+plotly
+chardet
+xlsxwriter
+altair
+requests
