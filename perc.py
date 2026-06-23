@@ -131,6 +131,9 @@ def get_demographic_data(url_demographic, client):
             ws_rescates = sheet_rescates.worksheet("percapita")
             data_rescates = ws_rescates.get_all_records()
             df_rescates = pd.DataFrame(data_rescates)
+            
+            dem_data['rescates_crudos'] = df_rescates.copy()
+            
             if not df_rescates.empty and 'RUT' in df_rescates.columns:
                 df_rescates['RUT_CLEAN'] = df_rescates['RUT'].apply(normalize_rut)
                 df_rescates['ESTA_PERCAPITADO'] = "SI"
@@ -782,7 +785,7 @@ else:
     st.markdown("---")
 
     # TABS PARA ORGANIZAR LA APP
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 Análisis de Brechas", "📈 Dashboard Demográfico", "📋 Nómina de Pacientes", "📝 Gestión de Rescates"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Análisis de Brechas", "📈 Dashboard Demográfico", "📋 Nómina de Pacientes", "📝 Gestión de Rescates", "🏆 Métricas de Rescates"])
 
     with tab1:
         st.markdown("### 📊 Análisis Estratégico y Financiero")
@@ -1165,6 +1168,65 @@ else:
                             st.error(f"❌ Error guardando datos: {e}")
         else:
             st.warning("No hay pacientes pendientes con los filtros actuales para rescatar.")
+
+    with tab5:
+        st.markdown("### 🏆 Métricas y Rendimiento de Rescates")
+        st.info("Indicadores de gestión y rendimiento del equipo de rescate.")
+        
+        df_rescates_raw = APP_CONFIG['datos'].get('rescates_crudos', pd.DataFrame())
+        
+        if df_rescates_raw.empty:
+            st.warning("Aún no hay registros manuales de rescates para mostrar métricas.")
+        else:
+            if 'FECHA_RESCATE' in df_rescates_raw.columns:
+                df_rescates_raw['FECHA_RESCATE_DT'] = pd.to_datetime(df_rescates_raw['FECHA_RESCATE'], errors='coerce')
+                df_rescates_raw['MES_RESCATE'] = df_rescates_raw['FECHA_RESCATE_DT'].dt.to_period('M').astype(str)
+            else:
+                df_rescates_raw['FECHA_RESCATE_DT'] = pd.NaT
+                df_rescates_raw['MES_RESCATE'] = 'Sin Fecha'
+                
+            total_rescates = len(df_rescates_raw)
+            mes_actual_str = pd.Timestamp.today().strftime('%Y-%m')
+            rescates_este_mes = df_rescates_raw[df_rescates_raw['MES_RESCATE'] == mes_actual_str].shape[0] if not df_rescates_raw.empty else 0
+            
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.metric(label="Total Rescates Históricos", value=total_rescates)
+            with c2:
+                st.metric(label="Rescates Este Mes", value=rescates_este_mes)
+            with c3:
+                gestores_unicos = df_rescates_raw['USUARIO_GESTOR'].nunique() if 'USUARIO_GESTOR' in df_rescates_raw.columns else 0
+                st.metric(label="Gestores Activos", value=gestores_unicos)
+                
+            st.markdown("---")
+            col_a, col_b = st.columns(2)
+            
+            with col_a:
+                st.markdown("#### 🥇 Top Gestores")
+                if 'USUARIO_GESTOR' in df_rescates_raw.columns:
+                    df_gestores = df_rescates_raw['USUARIO_GESTOR'].value_counts().reset_index()
+                    df_gestores.columns = ['USUARIO_GESTOR', 'CANTIDAD']
+                    fig_gestores = px.bar(df_gestores, x='CANTIDAD', y='USUARIO_GESTOR', orientation='h', color='CANTIDAD', color_continuous_scale="Viridis", text='CANTIDAD')
+                    fig_gestores.update_layout(yaxis={'categoryorder':'total ascending'}, showlegend=False)
+                    st.plotly_chart(fig_gestores, use_container_width=True)
+            
+            with col_b:
+                st.markdown("#### 🏥 Rescates por Centro")
+                if 'NOMBRE_CENTRO' in df_rescates_raw.columns:
+                    df_centros = df_rescates_raw['NOMBRE_CENTRO'].value_counts().reset_index()
+                    df_centros.columns = ['NOMBRE_CENTRO', 'CANTIDAD']
+                    fig_centros = px.pie(df_centros, names='NOMBRE_CENTRO', values='CANTIDAD', hole=0.4, color_discrete_sequence=px.colors.qualitative.Pastel)
+                    st.plotly_chart(fig_centros, use_container_width=True)
+            
+            st.markdown("#### 📈 Evolución en el Tiempo")
+            if not df_rescates_raw['FECHA_RESCATE_DT'].isna().all():
+                df_tiempo = df_rescates_raw.groupby('MES_RESCATE').size().reset_index(name='CANTIDAD')
+                fig_tiempo = px.line(df_tiempo, x='MES_RESCATE', y='CANTIDAD', markers=True, text='CANTIDAD', line_shape='spline')
+                fig_tiempo.update_traces(textposition="top center", line_color='#00A8E8', marker=dict(size=10, color="#FFB703"))
+                st.plotly_chart(fig_tiempo, use_container_width=True)
+                
+            with st.expander("📄 Ver Datos de Rescates (Crudos)"):
+                st.dataframe(df_rescates_raw, use_container_width=True)
 
 # --- FOOTER (REPLICADO EXACTO DE APP BASE) ---
 st.markdown("---")
