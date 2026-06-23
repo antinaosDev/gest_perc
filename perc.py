@@ -131,9 +131,12 @@ def get_demographic_data(url_demographic, client):
         try:
             url_rescates = st.secrets["URL_RESCATES"]
             sheet_rescates = client.open_by_url(url_rescates)
-            ws_rescates = sheet_rescates.worksheet("percapita")
-            data_rescates = ws_rescates.get_all_records()
-            df_rescates = pd.DataFrame(data_rescates)
+            try:
+                ws_rescates = sheet_rescates.worksheet("registro_rescates")
+                data_rescates = ws_rescates.get_all_records()
+                df_rescates = pd.DataFrame(data_rescates)
+            except gspread.exceptions.WorksheetNotFound:
+                df_rescates = pd.DataFrame()
             
             dem_data['rescates_crudos'] = df_rescates.copy()
             
@@ -1194,7 +1197,7 @@ else:
                             usuario_gestor = MASTER_ACCOUNT_ID
                             
                             # Logica de hoja destino
-                            target_sheet_name = "percapita" if categoria == "Inscrito Exitosamente" else "bajas_percapita"
+                            target_sheet_name = "registro_rescates" if categoria == "Inscrito Exitosamente" else "bajas_percapita"
                             
                             try:
                                 ws_target = sheet_rescates.worksheet(target_sheet_name)
@@ -1202,7 +1205,7 @@ else:
                                 ws_target = sheet_rescates.add_worksheet(title=target_sheet_name, rows="1000", cols="10")
                                 ws_target.append_row(["NOMBRES", "NOMBRE_CENTRO", "RUT", "ANIO_CORTE", "MES_CORTE", "CATEGORIA", "OBSERVACION", "FECHA_RESCATE", "USUARIO_GESTOR"])
                             
-                            if target_sheet_name == "percapita":
+                            if target_sheet_name == "registro_rescates":
                                 observacion_final = f"[{categoria}] {obs}" if obs else categoria
                                 row = [nombre, centro, rut_val, anio, mes, observacion_final, fecha_rescate, usuario_gestor]
                             else:
