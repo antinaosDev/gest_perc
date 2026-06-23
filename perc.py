@@ -32,7 +32,9 @@ def convert_df_to_csv(df):
 # -----------------------------------------------------------------------------
 # 0. CONFIGURACIÓN Y CONSTANTES
 # -----------------------------------------------------------------------------
-MASTER_ACCOUNT_ID = "cuenta_perc" 
+if 'logged_username' not in st.session_state:
+    st.session_state.logged_username = "cuenta_perc"
+MASTER_ACCOUNT_ID = st.session_state.logged_username
 URL_ADMIN_MASTER = st.secrets["URL_ADMIN_MASTER"]
 
 # CONSTANTES DE FECHA
@@ -75,7 +77,7 @@ def normalize_rut(rut):
     if len(rut) < 2: return "INVALIDO"
     return rut
 
-def get_demographic_data(url_demographic, client):
+def get_demographic_data(url_demographic, url_rescates, client):
     """Carga bases secundarias (Sector y Percápita)."""
     dem_data = {'sector': pd.DataFrame(), 'percapita': pd.DataFrame()}
     try:
@@ -126,7 +128,8 @@ def get_demographic_data(url_demographic, client):
 
         # 3. Rescates Manuales desde el archivo externo
         try:
-            url_rescates = st.secrets["URL_RESCATES"]
+            if not url_rescates or len(url_rescates) < 10:
+                raise ValueError("URL Rescates vacía o inválida")
             sheet_rescates = client.open_by_url(url_rescates)
             try:
                 ws_rescates = sheet_rescates.worksheet("registro_rescates")
@@ -184,11 +187,25 @@ def load_app_configuration(account_id):
             config['mensaje'] = "La hoja está vacía."
             return config
             
-        headers = raw_data[0]
-        records = [dict(zip(headers, row)) for row in raw_data[1:]]
-
+        headers = [str(h).strip() for h in raw_data[0]]
         
-        target_row = next((item for item in records if str(item['CUENTA']) == account_id), None)
+        target_row = None
+        for row in raw_data[1:]:
+            row_padded = row + [''] * (len(headers) - len(row))
+            cuenta_val = ""
+            for i, h in enumerate(headers):
+                if h.upper() == 'CUENTA':
+                    cuenta_val = str(row_padded[i]).strip()
+                    break
+            
+            if cuenta_val == account_id:
+                # Keep the first occurrence of each header to avoid being overwritten by duplicates
+                target_row = {}
+                for i, h in enumerate(headers):
+                    h_upper = h.upper()
+                    if h_upper not in target_row:
+                        target_row[h_upper] = row_padded[i]
+                break
         if not target_row:
             config['mensaje'] = "Cuenta no encontrada."
             return config
@@ -200,14 +217,22 @@ def load_app_configuration(account_id):
         config['datos']['URL_SHEET'] = str(target_row.get('URL_SHEET', '')).strip()
         config['datos']['URL_DATOS_DEM'] = str(target_row.get('DATOS_DEM', '')).strip()
         
+        plataforma_encontrada = ""
+        for key, val in target_row.items():
+            if str(key).strip().upper() == 'PLATAFORMA':
+                plataforma_encontrada = str(val).strip()
+                break
+        config['plataforma'] = plataforma_encontrada
+        
         config['debug_keys'] = list(target_row.keys())
         config['debug_vals'] = list(target_row.values())
         
         # Búsqueda robusta de la clave para evitar problemas con espacios en los headers
         clave_encontrada = 'percapita_ch_2025'
         for key, val in target_row.items():
-            if str(key).strip().upper() == 'CLAVE_PLATAFORMA':
-                clave_encontrada = str(val).strip()
+            if key == 'CLAVE_PLATAFORMA':
+                if str(val).strip() != '':
+                    clave_encontrada = str(val).strip()
                 break
         config['clave'] = clave_encontrada
         
@@ -246,7 +271,7 @@ def get_rescate_data(config):
         df = pd.DataFrame(data[1:], columns=data[0])
         df.columns = df.columns.str.strip()
         
-        dem_info = get_demographic_data(config['datos']['URL_DATOS_DEM'], client)
+        dem_info = get_demographic_data(config['datos']['URL_DATOS_DEM'], config['datos']['URL_SHEET'], client)
         
         if 'RUT' in df.columns:
             df['RUT_CLEAN'] = df['RUT'].apply(normalize_rut)
@@ -492,17 +517,31 @@ if not st.session_state.logged_in:
             st.markdown('<div class="login-title">Portal Análisis Percápita</div>', unsafe_allow_html=True)
             st.markdown('<div class="login-subtitle">Centro de Salud Familiar Cholchol</div>', unsafe_allow_html=True)
             
+            username = st.text_input("Usuario", placeholder="Ej: cuenta_perc").strip()
             password = st.text_input("Contraseña de Acceso", type="password", placeholder="Ingrese la clave").strip()
             
             submitted = st.form_submit_button("Ingresar al Sistema")
             
             if submitted:
-                clave_correcta = APP_CONFIG.get('clave', 'percapita_ch_2025')
-                if password == clave_correcta:
-                    st.session_state.logged_in = True
-                    st.rerun()
+                if not username:
+                    st.error("❌ Ingrese un nombre de usuario.")
                 else:
-                    st.error("❌ Contraseña incorrecta. Verifique su clave.")
+                    with st.spinner("Verificando credenciales..."):
+                        temp_config = load_app_configuration(username)
+                        if not temp_config['valido']:
+                            st.error(f"❌ {temp_config['mensaje']}")
+                        else:
+                            plataforma = str(temp_config.get('plataforma', '')).lower()
+                            if "percapita" not in plataforma and "percápita" not in plataforma:
+                                st.error("❌ Este usuario no tiene permisos para acceder a la plataforma Percápita.")
+                            else:
+                                clave_correcta = temp_config.get('clave', 'percapita_ch_2025')
+                                if password != clave_correcta:
+                                    st.error("❌ Contraseña incorrecta. Verifique su clave.")
+                                else:
+                                    st.session_state.logged_username = username
+                                    st.session_state.logged_in = True
+                                    st.rerun()
     st.stop()
 
 # --- APP PRINCIPAL ---
@@ -1184,10 +1223,10 @@ else:
                     if st.form_submit_button("Confirmar Rescate/Gestión", type="primary", use_container_width=True):
                         try:
                             scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-                            creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
+                            creds = Credentials.from_service_account_info(APP_CONFIG['credenciales'], scopes=scope)
                             client_gs = gspread.authorize(creds)
                             
-                            url_rescates = st.secrets["URL_RESCATES"]
+                            url_rescates = APP_CONFIG['datos']['URL_SHEET']
                             sheet_rescates = client_gs.open_by_url(url_rescates)
                             
                             fecha_rescate = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
