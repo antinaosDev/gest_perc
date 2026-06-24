@@ -7,6 +7,7 @@ import base64
 import requests
 import altair as alt  # Gráficos interactivos
 from datetime import datetime
+import pytz
 import time
 import gspread
 from google.oauth2.service_account import Credentials
@@ -136,7 +137,7 @@ def get_demographic_data(url_demographic, url_rescates, client):
         # 3. Rescates Manuales desde el archivo externo
         try:
             # FORZAR URL PARA EVITAR CACHE DE STREAMLIT CLOUD
-            url_rescates = "https://docs.google.com/spreadsheets/d/1Sl2d3hov81oR3eYBHbOEXfsrnnLPobweXD2sjg1uOcc/edit?usp=sharing"
+            url_rescates = "https://docs.google.com/spreadsheets/d/1Nv4iJtb6N-DqTZOjdkDBjMG8HXZU9jZGIfP_1e9dqS4/edit?usp=sharing"
             
             if not url_rescates or len(url_rescates) < 10:
                 raise ValueError("URL Rescates vacía o inválida")
@@ -235,6 +236,7 @@ def load_app_configuration(account_id):
 
         config['datos']['URL_SHEET'] = get_last_non_empty('URL_SHEET')
         config['datos']['URL_DATOS_DEM'] = get_last_non_empty('DATOS_DEM')
+        config['rol'] = get_last_non_empty('ROL', 'SIN_ROL')
         
         # Combine all Plataforma columns so if any contains 'Percapita', we find it
         plataformas = target_row.get('PLATAFORMA', [])
@@ -1406,11 +1408,13 @@ else:
                             
                             url_rescates = APP_CONFIG['datos']['URL_SHEET']
                             # FORZAR URL PARA EVITAR CACHE DE STREAMLIT CLOUD Y ERRORES 403
-                            url_rescates = "https://docs.google.com/spreadsheets/d/1Sl2d3hov81oR3eYBHbOEXfsrnnLPobweXD2sjg1uOcc/edit?usp=sharing"
+                            url_rescates = "https://docs.google.com/spreadsheets/d/1Nv4iJtb6N-DqTZOjdkDBjMG8HXZU9jZGIfP_1e9dqS4/edit?usp=sharing"
                             sheet_rescates = client_gs.open_by_url(url_rescates)
                             
-                            fecha_rescate = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            stgo_tz = pytz.timezone('America/Santiago')
+                            fecha_rescate = datetime.now(stgo_tz).strftime("%Y-%m-%d %H:%M:%S")
                             usuario_gestor = MASTER_ACCOUNT_ID
+                            rol_usuario = APP_CONFIG.get('rol', 'SIN_ROL')
                             
                             # Logica de hoja destino
                             target_sheet_name = "registro_rescates" if categoria == "Inscrito Exitosamente" else "bajas_percapita"
@@ -1428,6 +1432,16 @@ else:
                                 row = [nombre, centro, rut_val, anio, mes, categoria, obs, fecha_rescate, usuario_gestor]
                                 
                             ws_target.append_row(row)
+                            
+                            # Logica de Auditoria
+                            try:
+                                ws_auditoria = sheet_rescates.worksheet("auditoria")
+                            except gspread.exceptions.WorksheetNotFound:
+                                ws_auditoria = sheet_rescates.add_worksheet(title="auditoria", rows="1000", cols="10")
+                                ws_auditoria.append_row(["FECHA_HORA_CL", "CUENTA", "ROL", "ACCION", "RUT_PACIENTE", "NOMBRE_PACIENTE", "CATEGORIA_GESTION", "OBSERVACION"])
+                            
+                            fila_auditoria = [fecha_rescate, usuario_gestor, rol_usuario, "NUEVO REGISTRO", rut_val, nombre, categoria, obs]
+                            ws_auditoria.append_row(fila_auditoria)
                             
                             st.success(f"✅ ¡Paciente {nombre} ({rut_val}) registrado en la categoría '{categoria}'!")
                             st.cache_data.clear()
