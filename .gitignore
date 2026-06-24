@@ -38,3 +38,10 @@ archivo/
 
 # Virtual environments
 notify/
+
+# Medtify app & notificaciones
+medtify_app*.py
+icono_noti.*
+logo_noti.*
+launcher.py
+test_login.py
