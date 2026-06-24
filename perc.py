@@ -44,6 +44,7 @@ if 'logged_username' not in st.session_state:
     st.session_state.logged_username = "cuenta_perc"
 MASTER_ACCOUNT_ID = st.session_state.logged_username
 URL_ADMIN_MASTER = st.secrets["URL_ADMIN_MASTER"]
+URL_RESCATES = st.secrets.get("URL_RESCATES", "")
 
 # CONSTANTES DE FECHA
 MESES_ES = {
@@ -279,7 +280,7 @@ def get_rescate_data(config):
         df = pd.DataFrame(data[1:], columns=data[0])
         df.columns = df.columns.str.strip()
         
-        dem_info = get_demographic_data(config['datos']['URL_DATOS_DEM'], config['datos']['URL_SHEET'], client)
+        dem_info = get_demographic_data(config['datos']['URL_DATOS_DEM'], URL_RESCATES, client)
         
         if 'RUT' in df.columns:
             df['RUT_CLEAN'] = df['RUT'].apply(normalize_rut)
@@ -325,7 +326,7 @@ if APP_CONFIG.get('valido', False) and not st.session_state.get('auditoria_login
         scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds_login = Credentials.from_service_account_info(APP_CONFIG['credenciales'], scopes=scope)
         client_login = gspread.authorize(creds_login)
-        sheet_login = client_login.open_by_url(APP_CONFIG['datos']['URL_SHEET'])
+        sheet_login = client_login.open_by_url(URL_RESCATES)
         
         stgo_tz = pytz.timezone('America/Santiago')
         fecha_login = datetime.now(stgo_tz).strftime("%Y-%m-%d %H:%M:%S")
@@ -1421,12 +1422,17 @@ else:
                     obs = st.text_area("Detalles Adicionales (Opcional)")
                     
                     if st.form_submit_button("Confirmar Rescate/Gestión", type="primary", use_container_width=True):
+                        # ===== GUARDAR EN GOOGLE SHEETS ======
                         try:
+                            url_rescates = st.secrets["URL_RESCATES"]
+                            if not url_rescates or len(url_rescates) < 10:
+                                st.error("❌ Error: No se ha configurado la URL para guardar rescates (URL_RESCATES).")
+                                st.stop()
+                            
                             scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
                             creds = Credentials.from_service_account_info(APP_CONFIG['credenciales'], scopes=scope)
                             client_gs = gspread.authorize(creds)
                             
-                            url_rescates = APP_CONFIG['datos']['URL_SHEET']
                             sheet_rescates = client_gs.open_by_url(url_rescates)
                             
                             stgo_tz = pytz.timezone('America/Santiago')
