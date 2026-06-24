@@ -135,6 +135,9 @@ def get_demographic_data(url_demographic, url_rescates, client):
 
         # 3. Rescates Manuales desde el archivo externo
         try:
+            # FORZAR URL PARA EVITAR CACHE DE STREAMLIT CLOUD
+            url_rescates = "https://docs.google.com/spreadsheets/d/1Sl2d3hov81oR3eYBHbOEXfsrnnLPobweXD2sjg1uOcc/edit?usp=sharing"
+            
             if not url_rescates or len(url_rescates) < 10:
                 raise ValueError("URL Rescates vacía o inválida")
             sheet_rescates = client.open_by_url(url_rescates)
