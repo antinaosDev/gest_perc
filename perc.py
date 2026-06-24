@@ -1469,7 +1469,7 @@ else:
                             
                             if target_sheet_name == "registro_rescates":
                                 observacion_final = f"[{categoria}] {obs}" if obs else categoria
-                                row = [nombre, centro, rut_val, anio, mes, observacion_final, fecha_rescate, usuario_gestor]
+                                row = [nombre, centro, rut_val, anio, mes, categoria, observacion_final, fecha_rescate, usuario_gestor]
                             else:
                                 row = [nombre, centro, rut_val, anio, mes, categoria, obs, fecha_rescate, usuario_gestor]
                                 
