@@ -129,8 +129,11 @@ def get_demographic_data(url_demographic, url_rescates, client):
                 dem_data['max_anio_percapita'] = int(max_anio)
                 dem_data['max_mes_percapita'] = int(max_mes)
                 
-                # Usar registros únicos de toda la historia para no generar brechas falsas
-                df_perca_unique = df_perca.drop_duplicates(subset=['RUT_CLEAN']).copy()
+                # Filtrar ESTRICTAMENTE por el mes y año más reciente (el padrón oficial actual)
+                df_perca_reciente = df_perca[(df_perca['ANIO_NUM'] == max_anio) & (df_perca['MES_NUM'] == max_mes)].copy()
+                
+                # Usar registros únicos solo de este último corte
+                df_perca_unique = df_perca_reciente.drop_duplicates(subset=['RUT_CLEAN']).copy()
                 df_perca_unique['ESTA_PERCAPITADO'] = "SI"
                 dem_data['percapita'] = df_perca_unique[['RUT_CLEAN', 'ESTA_PERCAPITADO']]
         except: pass
