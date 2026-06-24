@@ -1402,6 +1402,8 @@ else:
                             client_gs = gspread.authorize(creds)
                             
                             url_rescates = APP_CONFIG['datos']['URL_SHEET']
+                            # FORZAR URL PARA EVITAR CACHE DE STREAMLIT CLOUD Y ERRORES 403
+                            url_rescates = "https://docs.google.com/spreadsheets/d/1Sl2d3hov81oR3eYBHbOEXfsrnnLPobweXD2sjg1uOcc/edit?usp=sharing"
                             sheet_rescates = client_gs.open_by_url(url_rescates)
                             
                             fecha_rescate = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
