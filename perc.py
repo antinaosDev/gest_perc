@@ -237,7 +237,14 @@ def load_app_configuration(account_id):
 
         config['datos']['URL_SHEET'] = get_last_non_empty('URL_SHEET')
         config['datos']['URL_DATOS_DEM'] = get_last_non_empty('DATOS_DEM')
-        config['rol'] = get_last_non_empty('ROL', 'SIN_ROL')
+        real_role = get_last_non_empty('ROL', 'SIN_ROL')
+        config['rol_real'] = real_role
+        
+        # Simulación de rol si es programador
+        if real_role == 'PROGRAMADOR' and 'simulated_role' in st.session_state:
+            config['rol'] = st.session_state['simulated_role']
+        else:
+            config['rol'] = real_role
         
         # Combine all Plataforma columns so if any contains 'Percapita', we find it
         plataformas = target_row.get('PLATAFORMA', [])
@@ -701,9 +708,97 @@ with st.sidebar:
     st.markdown(f"""
     <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(0, 168, 232, 0.4); padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
         <h4 style="color: #00A8E8; margin: 0; font-size: 1.1em; letter-spacing: 0.5px;">👤 Usuario Activo</h4>
-        <p style="color: #FFFFFF; margin: 5px 0 0 0; font-weight: bold; letter-spacing: 1px;">{MASTER_ACCOUNT_ID.upper()}</p>
+        <p style="color: #FFFFFF; margin: 5px 0 0 0; font-weight: bold; letter-spacing: 1px;">{MASTER_ACCOUNT_ID.upper()} ({APP_CONFIG['rol']})</p>
     </div>
     """, unsafe_allow_html=True)
+    
+    # ------------------ SIMULACIÓN DE ROL ------------------
+    if APP_CONFIG.get('rol_real') == 'PROGRAMADOR':
+        roles_disponibles = ['PROGRAMADOR', 'ADMINISTRADOR', 'JEFE_UNIDAD', 'PROF_UNIDAD']
+        current_sim_idx = roles_disponibles.index(APP_CONFIG['rol']) if APP_CONFIG['rol'] in roles_disponibles else 0
+        
+        sim_role = st.selectbox("🎭 Simular Rol", roles_disponibles, index=current_sim_idx)
+        if sim_role != APP_CONFIG['rol']:
+            st.session_state['simulated_role'] = sim_role
+            st.rerun()
+
+    st.markdown("---")
+    
+    # ------------------ GESTIÓN DE CONTRASEÑA ------------------
+    with st.expander("🔑 Cambiar Mi Contraseña"):
+        with st.form("form_cambiar_clave"):
+            nueva_clave = st.text_input("Nueva Contraseña", type="password")
+            confirmar_clave = st.text_input("Confirmar Contraseña", type="password")
+            
+            if st.form_submit_button("Actualizar Contraseña"):
+                if nueva_clave == confirmar_clave and len(nueva_clave) >= 3:
+                    try:
+                        scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+                        creds = Credentials.from_service_account_info(BOOTSTRAP_CREDS, scopes=scope)
+                        client = gspread.authorize(creds)
+                        ws_admin = client.open_by_url(URL_ADMIN_MASTER).sheet1
+                        
+                        data_admin = ws_admin.get_all_values()
+                        headers = [str(h).strip().upper() for h in data_admin[0]]
+                        
+                        col_cuenta = headers.index("CUENTA")
+                        col_clave = headers.index("CLAVE_PLATAFORMA")
+                        
+                        row_to_update = -1
+                        for i, row in enumerate(data_admin[1:], start=2):
+                            row_padded = row + [''] * (len(headers) - len(row))
+                            if str(row_padded[col_cuenta]).strip() == MASTER_ACCOUNT_ID:
+                                row_to_update = i
+                                break
+                                
+                        if row_to_update > 0:
+                            ws_admin.update_cell(row_to_update, col_clave + 1, nueva_clave)
+                            st.success("¡Contraseña actualizada exitosamente!")
+                        else:
+                            st.error("No se encontró el usuario en la base de datos.")
+                    except Exception as e:
+                        st.error(f"Error al actualizar la contraseña: {e}")
+                else:
+                    st.error("Las contraseñas no coinciden o son muy cortas.")
+
+    # ------------------ CREACIÓN DE USUARIOS ------------------
+    if APP_CONFIG.get('rol_real') == 'PROGRAMADOR':
+        with st.expander("➕ Crear Nuevo Usuario"):
+            with st.form("form_crear_usuario"):
+                n_cuenta = st.text_input("Nombre de Cuenta (CUENTA)")
+                n_clave = st.text_input("Contraseña Inicial (CLAVE_PLATAFORMA)")
+                n_rol = st.selectbox("Rol Asignado", ['ADMINISTRADOR', 'JEFE_UNIDAD', 'PROF_UNIDAD', 'PROGRAMADOR'])
+                
+                if st.form_submit_button("Crear Usuario"):
+                    if n_cuenta and n_clave:
+                        try:
+                            scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+                            creds = Credentials.from_service_account_info(BOOTSTRAP_CREDS, scopes=scope)
+                            client = gspread.authorize(creds)
+                            ws_admin = client.open_by_url(URL_ADMIN_MASTER).sheet1
+                            
+                            data_admin = ws_admin.get_all_values()
+                            headers = [str(h).strip().upper() for h in data_admin[0]]
+                            
+                            last_row = data_admin[-1]
+                            new_row = last_row.copy()
+                            new_row += [''] * (len(headers) - len(new_row))
+                            
+                            if "CUENTA" in headers: new_row[headers.index("CUENTA")] = n_cuenta
+                            if "CLAVE_PLATAFORMA" in headers: new_row[headers.index("CLAVE_PLATAFORMA")] = n_clave
+                            if "ROL" in headers: new_row[headers.index("ROL")] = n_rol
+                            
+                            for i, h in enumerate(headers):
+                                if h == "PLATAFORMA":
+                                    new_row[i] = "Percapita"
+                            
+                            ws_admin.append_row(new_row)
+                            st.success(f"✅ Usuario '{n_cuenta}' creado exitosamente con rol {n_rol}.")
+                        except Exception as e:
+                            st.error(f"Error creando usuario: {e}")
+                    else:
+                        st.error("Debe ingresar Cuenta y Clave.")
+                        
     st.markdown("---")
     app_mode = st.radio("🛠️ Módulo Activo:", ["📋 Rescate de Pacientes", "📊 Análisis Archivo Percápita"])
     st.markdown("---")
