@@ -957,23 +957,38 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# Carga de datos
+with st.spinner("🔄 Cruzando bases de datos en tiempo real..."):
+    df_rescate, dem_info = get_rescate_data(APP_CONFIG)
+    APP_CONFIG['datos']['rescates_crudos'] = dem_info.get('rescates_crudos', pd.DataFrame())
+    APP_CONFIG['datos']['bajas_crudas'] = dem_info.get('bajas_crudas', pd.DataFrame())
+
+anio_eval = dem_info.get('max_anio_percapita', 'N/A')
+mes_num = dem_info.get('max_mes_percapita', 0)
+mes_eval = MESES_ES.get(mes_num, 'N/A')
+
+st.markdown(f"""
+<div style="background-color: #E8F4F8; border-left: 4px solid #00A8E8; padding: 10px 15px; margin-bottom: 20px; border-radius: 4px;">
+    <p style="margin: 0; color: #2C3E50; font-weight: bold;">
+        📅 Padrón Percápita Evaluado: {mes_eval} {anio_eval}
+    </p>
+    <p style="margin: 0; color: #555; font-size: 0.9em;">
+        El cálculo de brechas se realiza cruzando las atenciones contra los inscritos oficiales de este corte.
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
 # Descripción de la Plataforma
 st.markdown("""
 <div class="info-card">
     <h4 style="margin-top:0; color: #2C3E50;">ℹ️ Acerca de esta Plataforma</h4>
     <p style="color: #555; font-size: 1rem; line-height: 1.5; margin-bottom: 0;">
         Este sistema permite monitorear en tiempo real a los pacientes que han sido atendidos en el establecimiento pero que 
-        <strong>no figuran inscritos en la base de datos Percápita</strong>. Utilice esta herramienta para identificar 
+        <strong>no figuran inscritos en la base de datos Percápita del corte actual</strong>. Utilice esta herramienta para identificar 
         oportunidades de rescate, coordinar con los profesionales y asegurar el correcto registro de la población a cargo.
     </p>
 </div>
 """, unsafe_allow_html=True)
-
-# Carga de datos
-with st.spinner("🔄 Cruzando bases de datos en tiempo real..."):
-    df_rescate, dem_info = get_rescate_data(APP_CONFIG)
-    APP_CONFIG['datos']['rescates_crudos'] = dem_info.get('rescates_crudos', pd.DataFrame())
-    APP_CONFIG['datos']['bajas_crudas'] = dem_info.get('bajas_crudas', pd.DataFrame())
 
 if df_rescate.empty:
     st.balloons()
