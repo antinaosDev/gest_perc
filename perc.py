@@ -136,7 +136,6 @@ def get_demographic_data(url_demographic, url_rescates, client):
 
         # 3. Rescates Manuales desde el archivo externo
         try:
-            url_rescates = APP_CONFIG['datos'].get('URL_SHEET', '')
             if not url_rescates or len(url_rescates) < 10:
                 raise ValueError("URL Rescates vacía o inválida")
             sheet_rescates = client.open_by_url(url_rescates)
