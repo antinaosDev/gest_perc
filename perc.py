@@ -320,6 +320,29 @@ def get_rescate_data(config):
 st.set_page_config(page_title="Gestión Percápita | CESFAM Cholchol", page_icon="🏥", layout="wide")
 APP_CONFIG = load_app_configuration(MASTER_ACCOUNT_ID)
 
+# AUDITORIA DE LOGIN (Se registra solo 1 vez por sesion)
+if APP_CONFIG.get('valido', False) and not st.session_state.get('auditoria_login_registrado', False):
+    try:
+        scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+        creds_login = Credentials.from_service_account_info(APP_CONFIG['credenciales'], scopes=scope)
+        client_login = gspread.authorize(creds_login)
+        sheet_login = client_login.open_by_url(APP_CONFIG['datos']['URL_SHEET'])
+        
+        stgo_tz = pytz.timezone('America/Santiago')
+        fecha_login = datetime.now(stgo_tz).strftime("%Y-%m-%d %H:%M:%S")
+        rol_usuario = APP_CONFIG.get('rol', 'SIN_ROL')
+        
+        try:
+            ws_auditoria = sheet_login.worksheet("auditoria")
+        except gspread.exceptions.WorksheetNotFound:
+            ws_auditoria = sheet_login.add_worksheet(title="auditoria", rows="1000", cols="10")
+            ws_auditoria.append_row(["FECHA_HORA_CL", "CUENTA", "ROL", "ACCION", "RUT_PACIENTE", "NOMBRE_PACIENTE", "CATEGORIA_GESTION", "OBSERVACION"])
+        
+        ws_auditoria.append_row([fecha_login, MASTER_ACCOUNT_ID, rol_usuario, "INICIO DE SESIÓN", "-", "-", "-", "El usuario ingresó a la plataforma."])
+        st.session_state['auditoria_login_registrado'] = True
+    except Exception as e:
+        print(f"Error en auditoria de login: {e}")
+
 # Estilos CSS
 st.markdown("""
 <style>
