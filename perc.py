@@ -316,107 +316,185 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
     :root {
-        --primary-blue: #00A8E8;  /* Celeste Tecnológico */
-        --navy-blue: #0A193D;     /* Azul oscuro profundo */
-        --success-green: #FFB703; /* Amarillo Tecnológico (Alertas Suaves) */
-        --accent-orange: #FB8500; /* Naranjo Tecnológico */
-        --text-dark: #0A193D;     /* Texto oscuro */
-        --text-gray: #6B7A90;
-        --bg-light: #F4F7F9;      /* Fondo limpio */
-        --white: #FFFFFF;
-        --card-shadow: 0 8px 16px -4px rgba(0, 168, 232, 0.1), 0 4px 8px -4px rgba(0, 168, 232, 0.06);
+        --primary-blue: #0A6E8D;
+        --secondary-blue: #8BB3C4;
+        --bg-main: #F4F7F6;
+        --bg-card: #FFFFFF;
+        --text-main: #2C3E50;
+        --text-muted: #6B7A90;
+        --sidebar-bg: #0B1120;
+        --border-color: #E2E8F0;
+        --shadow-sm: 0 2px 4px rgba(0,0,0,0.02);
+        --shadow-md: 0 4px 12px rgba(0,0,0,0.05);
     }
 
     html, body, [class*="css"] {
         font-family: 'Inter', sans-serif;
-        background-color: var(--bg-light);
-        color: var(--text-dark);
+        background-color: var(--bg-main) !important;
+        color: var(--text-main) !important;
     }
 
-    /* Estilos Generales */
-    .main-container { padding-top: 2rem; }
-    
+    /* Fondo general de la app */
+    .stApp {
+        background-color: var(--bg-main) !important;
+    }
+    div[data-testid="stAppViewContainer"] {
+        background-color: transparent !important;
+    }
+    div[data-testid="stAppViewContainer"]::before {
+        display: none !important;
+    }
+
+    /* Hacer transparente la barra superior nativa para mantener botones de Rerun/Cache */
+    header[data-testid="stHeader"] {
+        background-color: transparent !important;
+    }
+
+    /* SIDEBAR Oscuro */
+    section[data-testid="stSidebar"] {
+        background-color: var(--sidebar-bg) !important;
+        border-right: none !important;
+    }
+    section[data-testid="stSidebar"] * {
+        color: #FFFFFF !important;
+    }
+
+    /* Pestañas (Tabs) */
+    button[data-baseweb="tab"] {
+        background-color: transparent !important;
+        color: var(--text-muted) !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: var(--primary-blue) !important;
+        border-bottom-color: var(--primary-blue) !important;
+        border-bottom-width: 3px !important;
+        font-weight: 700 !important;
+    }
+
+    /* Dataframes y Expander */
+    .stDataFrame {
+        background-color: var(--bg-card) !important;
+        border-radius: 12px;
+        box-shadow: var(--shadow-md);
+        padding: 10px;
+        border: 1px solid var(--border-color);
+    }
+    .stDataFrame [data-testid="stTable"] {
+        background-color: transparent !important;
+    }
+    .stExpander {
+        background-color: var(--bg-card) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 12px;
+        box-shadow: var(--shadow-sm);
+    }
+
+    /* Inputs y Botones Globales (Gradients) */
+    .stButton>button, .stDownloadButton>button {
+        background: var(--primary-blue) !important;
+        color: #FFF !important;
+        border: none !important;
+        border-radius: 8px !important;
+        transition: transform 0.2s, box-shadow 0.2s !important;
+    }
+    .stButton>button:hover, .stDownloadButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(10, 110, 141, 0.4) !important;
+    }
+
     /* Header Institucional */
     .main-header {
-        background: var(--white);
+        background: var(--bg-card);
         padding: 30px; 
         border-radius: 16px; 
         margin-bottom: 25px; 
-        box-shadow: var(--card-shadow);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
         display: flex;
         align-items: center;
         gap: 20px;
-        border-left: 6px solid var(--primary-blue);
     }
-    .header-text h1 { margin:0; font-size: 2.2rem; font-weight: 700; color: var(--text-dark); }
-    .header-text p { margin:0; color: var(--text-gray); font-size: 1.1rem; margin-top: 5px; }
+    .header-text h1 { margin:0; font-size: 2.2rem; font-weight: 700; color: var(--text-main); }
+    .header-text p { margin:0; color: var(--text-muted); font-size: 1.1rem; margin-top: 5px; }
     
     /* Tarjetas de Información */
     .info-card {
-        background-color: var(--white);
+        background-color: var(--bg-card);
         border-left: 5px solid var(--primary-blue);
+        border-top: 1px solid var(--border-color);
+        border-right: 1px solid var(--border-color);
+        border-bottom: 1px solid var(--border-color);
         padding: 20px;
         border-radius: 16px;
         margin-bottom: 25px;
-        box-shadow: var(--card-shadow);
+        box-shadow: var(--shadow-sm);
     }
     
-    /* KPIs */
+    /* KPIs Premium Stitch Design */
     .kpi-metric {
-        background-color: var(--white); 
-        padding: 25px 20px; 
+        background: #FFFFFF !important; 
+        border: 1px solid #E5E7EB !important;
+        padding: 24px; 
         border-radius: 16px;
-        text-align: center; 
-        box-shadow: var(--card-shadow);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        text-align: left; 
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
         position: relative;
-        overflow: hidden;
+        display: flex;
+        flex-direction: column;
     }
     .kpi-metric:hover { 
-        transform: translateY(-5px); 
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1); 
+        transform: translateY(-2px); 
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04); 
     }
-    .kpi-value { font-size: 2.5rem; font-weight: 800; color: var(--text-dark); margin: 0; line-height: 1; }
-    .kpi-label { font-size: 0.95rem; color: var(--text-gray); margin-top: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 16px;
+    }
+    .kpi-icon-wrapper {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .kpi-icon-wrapper svg { width: 24px; height: 24px; }
+    .kpi-icon-wrapper.blue { background-color: #F0F9FF; color: #0284C7; }
+    .kpi-icon-wrapper.orange { background-color: #FFF7ED; color: #EA580C; }
+    .kpi-icon-wrapper.green { background-color: #F0FDF4; color: #16A34A; }
+    .kpi-label { font-size: 0.8rem; color: #6B7A90 !important; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 4px 0 !important; }
+    .kpi-value { font-size: 2.2rem; font-weight: 800; color: #111827 !important; margin: 0 !important; line-height: 1.1 !important; }
+
+    /* Ajuste para forzar color principal en textos en la vista principal */
+    .main h1, .main h2, .main h3, .main h4, .main h5, .main h6, .main p, .main label, .main .stMarkdown {
+        color: var(--text-main) !important;
+    }
+    
+    /* Inputs y Formularios (Premium Clean) */
+    .stSelectbox div[data-baseweb="select"] > div, .stTextInput div[data-baseweb="input"], .stTextArea textarea, .stNumberInput input {
+        background-color: #FFFFFF !important;
+        color: var(--text-main) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 8px !important;
+    }
+    .stSelectbox div[data-baseweb="select"] span {
+        color: var(--text-main) !important;
+    }
+    div[data-baseweb="popover"] ul {
+        background-color: #FFFFFF !important;
+        border: 1px solid var(--border-color) !important;
+    }
+    div[data-baseweb="popover"] li {
+        color: var(--text-main) !important;
+    }
+    div[data-baseweb="popover"] li:hover {
+        background-color: #F4F7F6 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
-
-# --- SIDEBAR (CON LOGO APP) ---
-with st.sidebar:
-    if os.path.exists("logo_noti.png"):
-        st.image("logo_noti.png", use_container_width=True)
-    elif APP_CONFIG['imagenes'].get('LOGO_NOTI'):
-        st.image(APP_CONFIG['imagenes']['LOGO_NOTI'], use_container_width=True)
-    else:
-        st.header("MEDTIFY")
-    
-    st.markdown(f"""
-    <div style="background: rgba(0,168,232,0.1); border: 1px solid #00A8E8; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px;">
-        <h4 style="color: #00A8E8; margin: 0; font-size: 1.1em;">👤 Usuario Activo</h4>
-        <p style="color: #6B7A90; margin: 5px 0 0 0; font-weight: bold;">{MASTER_ACCOUNT_ID.upper()}</p>
-    </div>
-    """, unsafe_allow_html=True)
-    st.markdown("---")
-    app_mode = st.radio("🛠️ Módulo Activo:", ["📋 Rescate de Pacientes", "📊 Análisis Archivo Percápita"])
-    st.markdown("---")
-
-    st.markdown("### 🏥 Panel Institucional")
-    st.success("🟢 Sistema Online y Sincronizado")
-    
-    st.markdown("""
-    **Módulos Disponibles:**
-    - 📊 Dashboard General
-    - 📋 Nómina de Rescate
-    - 📈 Estadísticas
-    """)
-    
-    st.info("""
-    💡 **Tip de uso:**
-    Utilice las cabeceras de la tabla para ordenar y buscar pacientes fácilmente por RUT o Profesional.
-    """)
-    
-    st.markdown("---")
-    st.caption("Versión 1.2.0 | Equipo de Gestión")
 
 # --- LOGIN ---
 if 'logged_in' not in st.session_state:
@@ -426,16 +504,28 @@ if not st.session_state.logged_in:
     # --- PANTALLA DE LOGIN PREMIUM ---
     st.markdown("""
     <style>
-        /* Fondo animado y elegante para toda la app durante el login */
+        /* Fondo animado y elegante para toda la app durante el login - DISENO STITCH */
         div[data-testid="stAppViewContainer"] {
-            background: linear-gradient(-45deg, #0A193D, #00A8E8, #FB8500, #FFB703);
-            background-size: 400% 400%;
-            animation: gradientBG 15s ease infinite;
+            background-color: #0A193D;
+            overflow: hidden;
         }
-        @keyframes gradientBG {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+        
+        div[data-testid="stAppViewContainer"]::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: 
+                radial-gradient(circle at 15% 50%, rgba(0, 168, 232, 0.4) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(251, 133, 0, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 50% 80%, rgba(11, 25, 61, 0.8) 0%, transparent 60%);
+            filter: blur(60px);
+            z-index: -1;
+            animation: pulse-bg 15s ease-in-out infinite alternate;
+        }
+        
+        @keyframes pulse-bg {
+            0% { transform: scale(1) translate(0, 0); }
+            100% { transform: scale(1.05) translate(2%, 2%); }
         }
         
         /* Eliminar padding superior extra y esconder barra principal */
@@ -443,18 +533,25 @@ if not st.session_state.logged_in:
         
         /* Estilo del contenedor Formulario (Card Glassmorphism) */
         div[data-testid="stForm"] {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 40px 30px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(10, 25, 61, 0.37);
+            border-radius: 16px;
+            padding: 40px 30px;
             margin-top: 5vh;
+        }
+
+        /* Color blanco para los labels del form sobre fondo oscuro */
+        div[data-testid="stForm"] label p {
+            color: #FFFFFF !important;
+            font-weight: 600;
         }
         
         /* Textos dentro del form */
         .login-title {
-            color: #0F2557;
+            color: #FFFFFF;
             font-family: 'Inter', sans-serif;
             font-weight: 800;
             font-size: 28px;
@@ -463,7 +560,7 @@ if not st.session_state.logged_in:
             letter-spacing: -0.5px;
         }
         .login-subtitle {
-            color: #6c757d;
+            color: #c6e7ff;
             text-align: center;
             font-size: 14px;
             margin-bottom: 30px;
@@ -548,6 +645,43 @@ if not APP_CONFIG['valido']:
     st.error(f"Error config: {APP_CONFIG['mensaje']}")
     st.stop()
 
+# --- SIDEBAR (CON LOGO APP) ---
+with st.sidebar:
+    if os.path.exists("logo_noti.png"):
+        st.image("logo_noti.png", use_container_width=True)
+    elif APP_CONFIG['imagenes'].get('LOGO_NOTI'):
+        st.image(APP_CONFIG['imagenes']['LOGO_NOTI'], use_container_width=True)
+    else:
+        st.header("MEDTIFY")
+    
+    st.markdown(f"""
+    <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(0, 168, 232, 0.4); padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+        <h4 style="color: #00A8E8; margin: 0; font-size: 1.1em; letter-spacing: 0.5px;">👤 Usuario Activo</h4>
+        <p style="color: #FFFFFF; margin: 5px 0 0 0; font-weight: bold; letter-spacing: 1px;">{MASTER_ACCOUNT_ID.upper()}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("---")
+    app_mode = st.radio("🛠️ Módulo Activo:", ["📋 Rescate de Pacientes", "📊 Análisis Archivo Percápita"])
+    st.markdown("---")
+
+    st.markdown("### 🏥 Panel Institucional")
+    st.success("🟢 Sistema Online y Sincronizado")
+    
+    st.markdown("""
+    **Módulos Disponibles:**
+    - 📊 Dashboard General
+    - 📋 Nómina de Rescate
+    - 📈 Estadísticas
+    """)
+    
+    st.info("""
+    💡 **Tip de uso:**
+    Utilice las cabeceras de la tabla para ordenar y buscar pacientes fácilmente por RUT o Profesional.
+    """)
+    
+    st.markdown("---")
+    st.caption("Versión 1.2.0 | Equipo de Gestión")
+
 if app_mode == "📊 Análisis Archivo Percápita":
     st.info(
         """
@@ -618,7 +752,8 @@ if app_mode == "📊 Análisis Archivo Percápita":
                             df_grouped.columns = ['Año', 'Inscritos']
                             st.markdown(f"### Evolución de Inscritos - Corte: {mes_corte_seleccionado}")
                             fig = px.bar(df_grouped, x='Año', y='Inscritos', text_auto=True, color='Año')
-                            st.plotly_chart(fig, use_container_width=True)
+                            fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
+                            st.plotly_chart(fig, use_container_width=True, theme=None)
 
                             st.divider()
                             st.markdown("#### Configuración de Exportación y Reporte 📥")
@@ -661,7 +796,6 @@ if app_mode == "📊 Análisis Archivo Percápita":
                                                         df_procesado.loc[idx, 'EDAD'] = hoy.year - nueva_fecha.year - ((hoy.month, hoy.day) < (nueva_fecha.month, nueva_fecha.day))
                                             if df_procesado['FECHA_NACIMIENTO'].isnull().sum() == 0: st.success("✅ ¡Fechas corregidas!")
                                         
-                                        df_exportar = df_procesado[columnas_seleccionadas]
                                         st.download_button(label="📥 Descargar CSV Consolidado", data=convert_df_to_csv(df_exportar), file_name=f'Inscritos_Percapita_{mes_corte_seleccionado}.csv', mime='text/csv', use_container_width=True)
                                         
                                         df_estadistico = df_procesado.copy()
@@ -674,7 +808,6 @@ if app_mode == "📊 Análisis Archivo Percápita":
                                             
                                         if grupos_seleccionados: df_estadistico = df_estadistico[df_estadistico[col_agrupacion].isin(grupos_seleccionados)]
                                         try:
-                                            excel_data = generar_excel_estadistico(df_estadistico, col_grupo=col_agrupacion, tipo_grupo_nombre=tipo_grupo)
                                             st.download_button(label="📊 Descargar Reporte Estadístico (Excel)", data=excel_data, file_name=f'Estadistica_{mes_corte_seleccionado}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
                                         except Exception as e: st.error(f"Error generando Excel: {e}")
                         else: st.warning("No hay datos.")
@@ -689,7 +822,8 @@ if app_mode == "📊 Análisis Archivo Percápita":
                         df_grouped_f = df_filtrado_f.groupby('ANIO_CORTE')['RUT'].count().reset_index()
                         df_grouped_f.columns = ['Año', 'Fallecidos']
                         fig_f = px.bar(df_grouped_f, x='Año', y='Fallecidos', text_auto=True, color='Año')
-                        st.plotly_chart(fig_f, use_container_width=True)
+                        fig_f.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
+                        st.plotly_chart(fig_f, use_container_width=True, theme=None)
                         st.download_button(label="Descargar Nómina Fallecidos", data=convert_df_to_csv(df_filtrado_f), file_name="Fallecidos.csv", mime="text/csv", use_container_width=True)
                 else: st.warning("Sin datos de fallecidos.")
 
@@ -719,13 +853,18 @@ if app_mode == "📊 Análisis Archivo Percápita":
 
             if not df_filt.empty:
                 g1, g2, g3 = st.columns(3)
-                with g1: st.plotly_chart(px.funnel(df_filt.groupby(['RANGO_ETARIO', 'GENERO'])['RUT'].nunique().reset_index(), x='RUT', y='RANGO_ETARIO', color='GENERO', title='Clasificación Etaria'), use_container_width=True)
+                with g1: 
+                    fig1 = px.funnel(df_filt.groupby(['RANGO_ETARIO', 'GENERO'])['RUT'].nunique().reset_index(), x='RUT', y='RANGO_ETARIO', color='GENERO', title='Clasificación Etaria')
+                    fig1.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
+                    st.plotly_chart(fig1, use_container_width=True, theme=None)
                 with g2: 
-                    fig = px.bar(df_filt.groupby(['TRAMO', 'GENERO'])['RUT'].nunique().reset_index(), x='TRAMO', y='RUT', text_auto=True, color='GENERO', barmode='group', title='Usuarios por Tramo')
-                    st.plotly_chart(fig, use_container_width=True)
+                    fig2 = px.bar(df_filt.groupby(['TRAMO', 'GENERO'])['RUT'].nunique().reset_index(), x='TRAMO', y='RUT', text_auto=True, color='GENERO', barmode='group', title='Usuarios por Tramo')
+                    fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
+                    st.plotly_chart(fig2, use_container_width=True, theme=None)
                 with g3: 
-                    fig = px.bar(df_filt.groupby(['NOMBRE_CENTRO', 'GENERO'])['RUT'].nunique().reset_index(), x='NOMBRE_CENTRO', y='RUT', text_auto=True, color='GENERO', barmode='group', title='Usuarios por Centro')
-                    st.plotly_chart(fig, use_container_width=True)
+                    fig3 = px.bar(df_filt.groupby(['NOMBRE_CENTRO', 'GENERO'])['RUT'].nunique().reset_index(), x='NOMBRE_CENTRO', y='RUT', text_auto=True, color='GENERO', barmode='group', title='Usuarios por Centro')
+                    fig3.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
+                    st.plotly_chart(fig3, use_container_width=True, theme=None)
 
                 with st.container(border=True):
                     st.subheader("Distribución Geográfica 🗺️")
@@ -743,11 +882,12 @@ if app_mode == "📊 Análisis Archivo Percápita":
                     if not df_map.empty:
                         try:
                             if df_map['COUNT_RUT'].nunique() == 1:
-                                fig_map = px.scatter_map(df_map, lat='LAT_CENTRO', lon='LONG_CENTRO', color='NOMBRE_CENTRO', zoom=10, map_style='open-street-map', hover_name='NOMBRE_CENTRO')
+                                fig_map = px.scatter_map(df_map, lat='LAT_CENTRO', lon='LONG_CENTRO', color='NOMBRE_CENTRO', zoom=10, map_style='carto-darkmatter', hover_name='NOMBRE_CENTRO')
                                 fig_map.update_traces(marker=dict(size=15))
                             else:
-                                fig_map = px.scatter_map(df_map, lat='LAT_CENTRO', lon='LONG_CENTRO', size='COUNT_RUT', color='NOMBRE_CENTRO', zoom=10, map_style='open-street-map', hover_name='NOMBRE_CENTRO')
-                            st.plotly_chart(fig_map, use_container_width=True)
+                                fig_map = px.scatter_map(df_map, lat='LAT_CENTRO', lon='LONG_CENTRO', size='COUNT_RUT', color='NOMBRE_CENTRO', zoom=10, map_style='carto-darkmatter', hover_name='NOMBRE_CENTRO')
+                            fig_map.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
+                            st.plotly_chart(fig_map, use_container_width=True, theme=None)
                         except Exception as e: st.error(f"Error mapa: {e}")
                     else: st.warning("Sin datos geográficos válidos.")
             else: st.warning("No hay datos.")
@@ -823,24 +963,39 @@ else:
     with c1:
         rut_col = 'RUT_CLEAN' if 'RUT_CLEAN' in df_filtered.columns else 'RUT'
         st.markdown(f"""
-        <div class="kpi-metric" style="border-bottom: 4px solid #E74C3C;">
+        <div class="kpi-metric">
+            <div class="kpi-header">
+                <div class="kpi-icon-wrapper blue">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                </div>
+            </div>
+            <p class="kpi-label">Pacientes a Rescatar</p>
             <p class="kpi-value">{df_filtered[rut_col].nunique()}</p>
-            <p class="kpi-label">Brechas Totales</p>
         </div>""", unsafe_allow_html=True)
     with c2:
         sector_crit = df_filtered['SECTOR'].mode()[0] if not df_filtered.empty and 'SECTOR' in df_filtered.columns else "N/A"
         st.markdown(f"""
-        <div class="kpi-metric" style="border-bottom: 4px solid #F39C12;">
-            <p class="kpi-value" style="font-size:1.5rem;">{sector_crit}</p>
-            <p class="kpi-label">Sector Crítico</p>
+        <div class="kpi-metric">
+            <div class="kpi-header">
+                <div class="kpi-icon-wrapper orange">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                </div>
+            </div>
+            <p class="kpi-label">Sector Principal</p>
+            <p class="kpi-value">{sector_crit}</p>
         </div>""", unsafe_allow_html=True)
     with c3:
-        prof_crit = df_filtered['NOMBRE_PROFESIONAL'].mode()[0] if not df_filtered.empty and 'NOMBRE_PROFESIONAL' in df_filtered.columns else "N/A"
-        prof_str = str(prof_crit)[:25] + ".." if len(str(prof_crit)) > 25 else str(prof_crit)
+        rut_col = 'RUT_CLEAN' if 'RUT_CLEAN' in df_filtered.columns else 'RUT'
+        fuga_capital = df_filtered[rut_col].nunique() * 16872
         st.markdown(f"""
-        <div class="kpi-metric" style="border-bottom: 4px solid #3498DB;">
-            <p class="kpi-value" style="font-size:1.1rem;">{prof_str}</p>
-            <p class="kpi-label">Top Profesional</p>
+        <div class="kpi-metric">
+            <div class="kpi-header">
+                <div class="kpi-icon-wrapper green">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                </div>
+            </div>
+            <p class="kpi-label">Fuga Capital</p>
+            <p class="kpi-value">CLP {fuga_capital:,.0f}</p>
         </div>""", unsafe_allow_html=True)
 
     st.markdown("---")
@@ -869,12 +1024,11 @@ else:
                     df_fin = df_fin.groupby('SECTOR')[rut_col].nunique().reset_index()
                     df_fin.rename(columns={rut_col: 'RUT'}, inplace=True)
                     df_fin['Fuga de Capital (CLP)'] = df_fin['RUT'] * valor_percapita
-                    df_fin['Agrupador'] = 'Todos los Sectores'
-                    fig_tree = px.treemap(df_fin, path=['Agrupador', 'SECTOR'], values='Fuga de Capital (CLP)',
-                                          color='Fuga de Capital (CLP)', color_continuous_scale='Reds',
-                                          title="Distribución de Fuga de Capital por Sector")
-                    fig_tree.update_traces(textinfo="label+value+percent parent")
-                    st.plotly_chart(fig_tree, use_container_width=True)
+                    fig_sector = px.pie(df_fin, values='Fuga de Capital (CLP)', names='SECTOR', hole=0.6,
+                                          title="Fuga de Capital por Sector", color_discrete_sequence=px.colors.sequential.Blues_r)
+                    fig_sector.update_traces(textposition='outside', textinfo='percent+label', marker=dict(line=dict(color='#FFFFFF', width=2)))
+                    fig_sector.update_layout(showlegend=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=20, r=20, b=20))
+                    st.plotly_chart(fig_sector, use_container_width=True, theme=None)
             
             with g_b:
                 t1, t2, t3 = st.tabs(["📝 Motivos Consulta", "👨‍⚕️ Profesionales", "💼 Profesiones"])
@@ -885,57 +1039,75 @@ else:
                         df_mot = df_unica.groupby('MOTIVO_CONSULTA')[rut_col].nunique().reset_index()
                         df_mot.rename(columns={rut_col: 'RUT'}, inplace=True)
                         df_mot = df_mot.sort_values('RUT', ascending=False).head(10).sort_values('RUT', ascending=True)
-                        fig_mot = px.bar(df_mot, x='RUT', y='MOTIVO_CONSULTA', text_auto=True, orientation='h',
-                                          title="Top 10 Motivos de Consulta",
-                                          color='RUT', color_continuous_scale=['#00A8E8', '#0F2557'])
-                        fig_mot.update_layout(coloraxis_showscale=False)
-                        st.plotly_chart(fig_mot, use_container_width=True)
+                        fig_mot = px.bar(df_mot, x='RUT', y='MOTIVO_CONSULTA', text='RUT', orientation='h',
+                                          title="Top 10 Motivos de Consulta")
+                        fig_mot.update_traces(marker_color='#0EA5E9', marker_line_width=0, textposition='outside')
+                        fig_mot.update_layout(xaxis=dict(showgrid=False, visible=False), yaxis=dict(showgrid=False, title="", automargin=True), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=150, r=30, b=0))
+                        st.plotly_chart(fig_mot, use_container_width=True, theme=None)
                 with t2:
                     if 'NOMBRE_PROFESIONAL' in df_filtered.columns:
                         df_prof = df_unica.groupby('NOMBRE_PROFESIONAL')[rut_col].nunique().reset_index()
                         df_prof.rename(columns={rut_col: 'RUT'}, inplace=True)
                         df_prof = df_prof.sort_values('RUT', ascending=False).head(10).sort_values('RUT', ascending=True)
-                        fig_prof = px.bar(df_prof, x='RUT', y='NOMBRE_PROFESIONAL', text_auto=True, orientation='h',
-                                          title="Top 10 Profesionales",
-                                          color='RUT', color_continuous_scale=['#FFB703', '#FB8500'])
-                        fig_prof.update_layout(coloraxis_showscale=False)
-                        st.plotly_chart(fig_prof, use_container_width=True)
+                        fig_prof = px.bar(df_prof, x='RUT', y='NOMBRE_PROFESIONAL', text='RUT', orientation='h',
+                                          title="Top 10 Profesionales")
+                        fig_prof.update_traces(marker_color='#F97316', marker_line_width=0, textposition='outside')
+                        fig_prof.update_layout(xaxis=dict(showgrid=False, visible=False), yaxis=dict(showgrid=False, title="", automargin=True), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=150, r=30, b=0))
+                        st.plotly_chart(fig_prof, use_container_width=True, theme=None)
                 with t3:
                     if 'PROFESION' in df_filtered.columns:
                         df_profesion = df_unica.groupby('PROFESION')[rut_col].nunique().reset_index()
                         df_profesion.rename(columns={rut_col: 'RUT'}, inplace=True)
                         df_profesion = df_profesion.sort_values('RUT', ascending=False).head(10).sort_values('RUT', ascending=True)
-                        fig_profesion = px.bar(df_profesion, x='RUT', y='PROFESION', text_auto=True, orientation='h',
-                                          title="Top 10 Profesiones",
-                                          color='RUT', color_continuous_scale=['#2ECC71', '#27AE60'])
-                        fig_profesion.update_layout(coloraxis_showscale=False)
-                        st.plotly_chart(fig_profesion, use_container_width=True)
+                        fig_profesion = px.bar(df_profesion, x='RUT', y='PROFESION', text='RUT', orientation='h',
+                                          title="Top 10 Profesiones")
+                        fig_profesion.update_traces(marker_color='#10B981', marker_line_width=0, textposition='outside')
+                        fig_profesion.update_layout(xaxis=dict(showgrid=False, visible=False), yaxis=dict(showgrid=False, title="", automargin=True), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=150, r=30, b=0))
+                        st.plotly_chart(fig_profesion, use_container_width=True, theme=None)
 
     with tab2:
         st.markdown("### 📈 Perfil Demográfico de la Brecha")
         if not df_filtered.empty:
-            if 'EDAD_ACTUAL' in df_filtered.columns and 'GENERO' in df_filtered.columns:
-                df_filtered['EDAD_NUM_CHART'] = pd.to_numeric(df_filtered['EDAD_ACTUAL'], errors='coerce')
-                
-                fig_demo = px.histogram(df_filtered, x="EDAD_NUM_CHART", color="GENERO",
-                                        title="Distribución de Edad y Género de Pacientes no Inscritos",
-                                        labels={'EDAD_NUM_CHART':'Edad (Años)'},
-                                        nbins=15, barmode='group',
-                                        color_discrete_sequence=px.colors.qualitative.Set2)
-                st.plotly_chart(fig_demo, use_container_width=True)
+            d1, d2 = st.columns(2)
+            with d1:
+                if 'GENERO' in df_filtered.columns:
+                    df_gen = df_filtered['GENERO'].value_counts().reset_index()
+                    df_gen.columns = ['Género', 'Pacientes']
+                    fig_gen = px.pie(df_gen, values='Pacientes', names='Género', hole=0.6, title="Distribución por Género", color_discrete_sequence=['#0EA5E9', '#F97316', '#10B981', '#8B5CF6'])
+                    fig_gen.update_traces(textposition='outside', textinfo='percent+label', marker=dict(line=dict(color='#FFFFFF', width=2)))
+                    fig_gen.update_layout(showlegend=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=20, r=20, b=20))
+                    st.plotly_chart(fig_gen, use_container_width=True, theme=None)
+            with d2:
+                if 'EDAD_ACTUAL' in df_filtered.columns:
+                    df_edad = df_filtered.copy()
+                    df_edad['EDAD_NUM'] = pd.to_numeric(df_edad['EDAD_ACTUAL'], errors='coerce')
+                    bins = [-1, 18, 40, 60, 150]
+                    labels = ['0-18 años', '19-40 años', '41-60 años', 'Mayor a 60']
+                    df_edad['Grupo Etario'] = pd.cut(df_edad['EDAD_NUM'], bins=bins, labels=labels, right=True)
+                    rut_col = 'RUT_CLEAN' if 'RUT_CLEAN' in df_edad.columns else 'RUT'
+                    df_edad_grp = df_edad.groupby('Grupo Etario', observed=False)[rut_col].nunique().reset_index()
+                    df_edad_grp.columns = ['Grupo Etario', 'Pacientes']
+                    fig_edad = px.bar(df_edad_grp, x='Pacientes', y='Grupo Etario', text='Pacientes', orientation='h', title="Distribución por Grupos de Edad")
+                    fig_edad.update_traces(marker_color='#F97316', marker_line_width=0, textposition='outside')
+                    fig_edad.update_layout(xaxis=dict(showgrid=False, visible=False), yaxis=dict(showgrid=False, title="", automargin=True), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=100, r=30, b=10))
+                    st.plotly_chart(fig_edad, use_container_width=True, theme=None)
                 
             if 'FECHA_AGENDADA' in df_filtered.columns:
                 df_time = df_filtered.dropna(subset=['FECHA_AGENDADA']).copy()
                 df_time['FECHA'] = pd.to_datetime(df_time['FECHA_AGENDADA'].astype(str).str.split(' ').str[0], errors='coerce')
                 df_time = df_time.dropna(subset=['FECHA'])
                 if not df_time.empty:
+                    df_time['MES'] = df_time['FECHA'].dt.strftime('%Y-%m')
                     rut_col_time = 'RUT_CLEAN' if 'RUT_CLEAN' in df_time.columns else 'RUT'
-                    df_time_grp = df_time.groupby('FECHA')[rut_col_time].nunique().reset_index()
+                    df_time_grp = df_time.groupby('MES')[rut_col_time].nunique().reset_index()
                     df_time_grp.rename(columns={rut_col_time: 'RUT'}, inplace=True)
-                    df_time_grp['Fuga'] = df_time_grp['RUT'] * 16872
-                    fig_time = px.area(df_time_grp, x='FECHA', y='Fuga', title="Evolución Temporal de Fuga de Capital", color_discrete_sequence=['#FFB703'])
-                    fig_time.update_traces(mode='lines+markers', line=dict(color='#FB8500', width=3), fillcolor='rgba(255, 183, 3, 0.3)')
-                    st.plotly_chart(fig_time, use_container_width=True)
+                    df_time_grp['Fuga (CLP)'] = df_time_grp['RUT'] * 16872
+                    df_time_grp = df_time_grp.sort_values('MES')
+                    
+                    fig_time = px.line(df_time_grp, x='MES', y='Fuga (CLP)', text='Fuga (CLP)', title="Evolución Mensual de Fuga de Capital")
+                    fig_time.update_traces(mode='lines+markers+text', line=dict(color='#10B981', width=4), marker=dict(size=8, color='#FFFFFF', line=dict(color='#10B981', width=2)), texttemplate='CLP %{text:,.0f}', textposition='top center')
+                    fig_time.update_layout(xaxis=dict(showgrid=False, title="", type='category', tickangle=-45, automargin=True), yaxis=dict(showgrid=False, visible=False), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=60, l=10, r=30, b=40))
+                    st.plotly_chart(fig_time, use_container_width=True, theme=None)
                 
             st.info("🚨 **Nota de Gestión:** El perfil demográfico permite focalizar el medio de contacto. Pacientes menores de 40 años responden mejor a canales digitales o WhatsApp, mientras que pacientes sobre 60 años pueden requerir llamados telefónicos directos o gestiones presenciales.")
 
@@ -983,17 +1155,6 @@ else:
             else:
                 df_sorted['TIPO_RESCATE'] = "Por Rescatar"
             
-            e1, e2, e3 = st.columns(3)
-            with e1:
-                rut_col_stat = 'RUT_CLEAN' if 'RUT_CLEAN' in df_sorted.columns else 'RUT'
-                st.metric("Pacientes a Rescatar", df_sorted[rut_col_stat].nunique())
-            with e2:
-                top_sector = df_sorted['SECTOR'].mode()[0] if 'SECTOR' in df_sorted.columns and not df_sorted['SECTOR'].empty else "N/A"
-                st.metric("Sector Principal", top_sector)
-            with e3:
-                riesgo = df_sorted[rut_col_stat].nunique() * 16872
-                st.metric("Fuga Capital", f"CLP {riesgo:,.0f}")
-                
             c_met, c_chart = st.columns([1.2, 1])
             with c_met:
                 st.markdown("<br>", unsafe_allow_html=True)
@@ -1005,11 +1166,11 @@ else:
                 df_pie = df_sorted['TIPO_RESCATE'].value_counts().reset_index()
                 df_pie.columns = ['Tipo', 'Cantidad']
                 fig_donut = px.pie(df_pie, values='Cantidad', names='Tipo', hole=0.5, 
-                                   color='Tipo', color_discrete_map={'Rescate Retroactivo': '#00A8E8', 'Por Rescatar': '#FFB703', 'Sin Fecha': '#6B7A90'},
+                                   color='Tipo', color_discrete_map={'Rescate Retroactivo': '#0A6E8D', 'Por Rescatar': '#FB8500', 'Sin Fecha': '#6B7A90'},
                                    title="Estado de Horas")
-                fig_donut.update_traces(textposition='inside', textinfo='percent+label')
-                fig_donut.update_layout(showlegend=False, margin=dict(t=30, b=0, l=0, r=0))
-                st.plotly_chart(fig_donut, use_container_width=True)
+                fig_donut.update_traces(textposition='inside', textinfo='percent+label', marker=dict(line=dict(color='#FFFFFF', width=2)))
+                fig_donut.update_layout(showlegend=False, margin=dict(t=30, b=0, l=0, r=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
+                st.plotly_chart(fig_donut, use_container_width=True, theme=None)
                 
             if filtro_tipo == "🔵 Rescate Retroactivo":
                 df_sorted = df_sorted[df_sorted['TIPO_RESCATE'] == "Rescate Retroactivo"]
