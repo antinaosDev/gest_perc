@@ -13,3 +13,28 @@ venv.bak/
 .vscode/
 .opencode.json
 .antigravity/
+
+# Builds and dists
+build/
+dist/
+dist_definitivo/
+dist.zip
+perc_app/
+app_base/
+mi_base/
+*.spec
+
+# Credentials and secrets
+cred.py
+token.json
+sistemas-*.json
+limit_tracker.json
+
+# Sessions and user data
+selenium_profile/
+medtify_session/
+sesion_whatsapp_*/
+archivo/
+
+# Virtual environments
+notify/
