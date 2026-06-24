@@ -512,12 +512,12 @@ if not st.session_state.logged_in:
     st.markdown("""
     <style>
         /* Fondo animado y elegante para toda la app durante el login - DISENO STITCH */
-        div[data-testid="stAppViewContainer"] {
-            background-color: #0A193D;
+        .stApp, div[data-testid="stAppViewContainer"] {
+            background-color: #0A193D !important;
             overflow: hidden;
         }
         
-        div[data-testid="stAppViewContainer"]::before {
+        .stApp::before, div[data-testid="stAppViewContainer"]::before {
             content: "";
             position: absolute;
             inset: 0;
@@ -540,11 +540,11 @@ if not st.session_state.logged_in:
         
         /* Estilo del contenedor Formulario (Card Glassmorphism) */
         div[data-testid="stForm"] {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(10, 25, 61, 0.95) !important;
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px 0 rgba(10, 25, 61, 0.37);
+            border: 1px solid rgba(0, 168, 232, 0.4) !important;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5) !important;
             border-radius: 16px;
             padding: 40px 30px;
             margin-top: 5vh;
