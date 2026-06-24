@@ -21,6 +21,13 @@ import chardet
 from class_ges import *
 from analisis_func import *
 
+st.set_page_config(
+    page_title="Análisis Percápita", 
+    page_icon="🏥", 
+    layout="wide", 
+    initial_sidebar_state="expanded"
+)
+
 @st.cache_data(show_spinner="Procesando y consolidando archivos...")
 def cargar_datos_cache_v2(archivos_cargados):
     return reporte_percapita(archivos_cargados)
@@ -652,7 +659,7 @@ with st.sidebar:
     elif APP_CONFIG['imagenes'].get('LOGO_NOTI'):
         st.image(APP_CONFIG['imagenes']['LOGO_NOTI'], use_container_width=True)
     else:
-        st.header("MEDTIFY")
+        st.markdown('<div style="font-size: 50px; text-align: center; margin-bottom: 20px;">🏥<br><span style="font-size: 24px; font-weight: bold; color: #0EA5E9; font-family: sans-serif;">MEDTIFY</span></div>', unsafe_allow_html=True)
     
     st.markdown(f"""
     <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(0, 168, 232, 0.4); padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
