@@ -1294,6 +1294,16 @@ try:
 except Exception:
     logo_url = APP_CONFIG['imagenes'].get('LOGO_NOTI', 'https://cdn-icons-png.flaticon.com/512/2966/2966327.png')
 
+# Carga de datos
+with st.spinner("🔄 Cruzando bases de datos en tiempo real..."):
+    df_rescate, dem_info = get_rescate_data(APP_CONFIG)
+    APP_CONFIG['datos']['rescates_crudos'] = dem_info.get('rescates_crudos', pd.DataFrame())
+    APP_CONFIG['datos']['bajas_crudas'] = dem_info.get('bajas_crudas', pd.DataFrame())
+
+anio_eval = dem_info.get('max_anio_percapita', 'N/A')
+mes_num = dem_info.get('max_mes_percapita', 0)
+mes_eval = MESES_ES.get(mes_num, 'N/A')
+
 with st.expander("ℹ️ Información Institucional y Guía de Uso de la Plataforma", expanded=False):
     st.markdown(f"""
     <div class="main-header" style="margin-bottom: 15px;">
