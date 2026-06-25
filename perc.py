@@ -973,6 +973,8 @@ with st.sidebar:
                             next_row_index = len(data_admin) + 1
                             ws_admin.insert_row(new_row, index=next_row_index)
                             st.success(f"✅ Usuario '{n_cuenta}' creado exitosamente con rol {n_rol}.")
+                            get_user_list.clear()
+                            load_app_configuration.clear()
                         except Exception as e:
                             st.error(f"Error creando usuario: {e}")
                     else:
@@ -1037,6 +1039,8 @@ with st.sidebar:
                                         if "ESTADO_APP" in headers:
                                             ws_admin.update_cell(row_to_update, headers.index("ESTADO_APP") + 1, e_estado)
                                     st.success(f"✅ Usuario '{e_cuenta}' actualizado exitosamente.")
+                                    get_user_list.clear()
+                                    load_app_configuration.clear()
                                 else:
                                     st.error("No se encontró el usuario especificado.")
                         except Exception as e:
@@ -1075,6 +1079,7 @@ with st.sidebar:
                                     ws_admin.delete_rows(row_to_delete)
                                     st.success(f"✅ Usuario '{d_cuenta}' eliminado exitosamente.")
                                     get_user_list.clear()
+                                    load_app_configuration.clear()
                                 else:
                                     st.error("No se encontró el usuario especificado.")
                         except Exception as e:
