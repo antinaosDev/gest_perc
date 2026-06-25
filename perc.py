@@ -962,7 +962,8 @@ with st.sidebar:
                                 if h == "PLATAFORMA":
                                     new_row[i] = "Percapita"
                             
-                            ws_admin.append_row(new_row)
+                            next_row_index = len(data_admin) + 1
+                            ws_admin.insert_row(new_row, index=next_row_index)
                             st.success(f"✅ Usuario '{n_cuenta}' creado exitosamente con rol {n_rol}.")
                         except Exception as e:
                             st.error(f"Error creando usuario: {e}")
