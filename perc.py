@@ -2179,7 +2179,11 @@ else:
                 with col_a:
                     st.markdown("#### 🥇 Top Gestores")
                     if 'USUARIO_GESTOR' in df_rescates_raw.columns:
-                        df_gestores = df_rescates_raw['USUARIO_GESTOR'].value_counts().reset_index()
+                        if 'CATEGORIA' in df_rescates_raw.columns:
+                            df_exitosos = df_rescates_raw[df_rescates_raw['CATEGORIA'].str.contains("Inscrito Exitosamente", na=False, case=False)]
+                        else:
+                            df_exitosos = df_rescates_raw
+                        df_gestores = df_exitosos['USUARIO_GESTOR'].value_counts().reset_index()
                         df_gestores.columns = ['USUARIO_GESTOR', 'CANTIDAD']
                         fig_gestores = px.bar(df_gestores, x='CANTIDAD', y='USUARIO_GESTOR', orientation='h', color='CANTIDAD', color_continuous_scale="Teal", text='CANTIDAD')
                         fig_gestores.update_traces(textposition='auto', marker_line_color='rgb(8,48,107)', marker_line_width=1.5, opacity=0.8)
