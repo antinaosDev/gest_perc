@@ -315,7 +315,15 @@ def load_app_configuration(account_id):
                         target_row[h_upper].append(row_padded[i])
                 break
         if not target_row:
-            config['mensaje'] = "Cuenta no encontrada."
+            cuentas_list = []
+            for r in raw_data[1:]:
+                rp = r + [''] * (len(headers) - len(r))
+                for idx_h, ht in enumerate(headers):
+                    if ht.upper() == 'CUENTA':
+                        if rp[idx_h].strip():
+                            cuentas_list.append(rp[idx_h].strip())
+                        break
+            config['mensaje'] = f"Cuenta '{account_id}' no encontrada. Disponibles: {cuentas_list}"
             return config
 
         def get_last_non_empty(key, default=''):
