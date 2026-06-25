@@ -256,6 +256,10 @@ def get_demographic_data(url_demographic, url_rescates, _client):
                                         
                         if es_captura_potencial:
                             capturas_potenciales.append(rut)
+                        elif 'ISAPRE' in cat:
+                            dem_data.setdefault('isapres_observacion', set()).add(rut)
+                        elif 'CARENCIA' in cat or 'BLOQUEO' in cat:
+                            dem_data.setdefault('carencias_observacion', set()).add(rut)
                         else:
                             fugas_recurrentes.append(rut)
                             
@@ -413,12 +417,19 @@ def get_rescate_data(config):
             capturas_potenciales = dem_info.get('capturas_potenciales', set())
             fallecidos_historicos = dem_info.get('fallecidos_historicos', set())
             rechazos_previsionales = dem_info.get('rechazos_previsionales', set())
+            isapres_observacion = dem_info.get('isapres_observacion', set())
+            carencias_observacion = dem_info.get('carencias_observacion', set())
             
             df.loc[(df['ESTADO_PERCAPITA'] == 'PENDIENTE INSCRIPCION') & (df['RUT_CLEAN'].isin(alertas_recaptura)), 'ESTADO_PERCAPITA'] = 'ALERTA RECAPTURA'
             df.loc[(df['ESTADO_PERCAPITA'] == 'PENDIENTE INSCRIPCION') & (df['RUT_CLEAN'].isin(capturas_potenciales)), 'ESTADO_PERCAPITA'] = 'CAPTURA POTENCIAL TEMP'
             df.loc[(df['ESTADO_PERCAPITA'] == 'PENDIENTE INSCRIPCION') & (df['RUT_CLEAN'].isin(fugas_recurrentes)), 'ESTADO_PERCAPITA'] = 'FUGA RECURRENTE TEMP'
             
             df.loc[(df['ESTADO_PERCAPITA'] == 'PENDIENTE INSCRIPCION') & (df['RUT_CLEAN'].isin(rechazos_previsionales)), 'ESTADO_PERCAPITA'] = 'RECHAZO PREVISIONAL'
+            
+            # Lógica manual sobreescribe:
+            df.loc[(df['ESTADO_PERCAPITA'].isin(['PENDIENTE INSCRIPCION', 'RECHAZO PREVISIONAL'])) & (df['RUT_CLEAN'].isin(isapres_observacion)), 'ESTADO_PERCAPITA'] = 'OBSERVACION ISAPRE TEMP'
+            df.loc[(df['ESTADO_PERCAPITA'].isin(['PENDIENTE INSCRIPCION', 'RECHAZO PREVISIONAL'])) & (df['RUT_CLEAN'].isin(carencias_observacion)), 'ESTADO_PERCAPITA'] = 'RECHAZO PREVISIONAL' # Carencias siempre visibles
+            
             df.loc[(df['RUT_CLEAN'].isin(fallecidos_historicos)), 'ESTADO_PERCAPITA'] = 'FALLECIDO HISTORICO'
             
             if 'FECHA_AGENDADA' in df.columns:
@@ -429,14 +440,19 @@ def get_rescate_data(config):
                 idx_fuga = (df['ESTADO_PERCAPITA'] == 'FUGA RECURRENTE TEMP') & (df['TEMP_ANIO_AGENDA'] == max_anio_eval) & (df['CANT_ATENCIONES'] >= 3)
                 df.loc[idx_fuga, 'ESTADO_PERCAPITA'] = 'FUGA RECURRENTE'
                 
-                # Capturas potenciales: >= 3 atenciones
+                # Capturas potenciales (Otro centro): >= 3 atenciones
                 idx_captura = (df['ESTADO_PERCAPITA'] == 'CAPTURA POTENCIAL TEMP') & (df['TEMP_ANIO_AGENDA'] == max_anio_eval) & (df['CANT_ATENCIONES'] >= 3)
                 df.loc[idx_captura, 'ESTADO_PERCAPITA'] = 'CAPTURA POTENCIAL'
                 
-                df.loc[df['ESTADO_PERCAPITA'].isin(['FUGA RECURRENTE TEMP', 'CAPTURA POTENCIAL TEMP']), 'ESTADO_PERCAPITA'] = 'BAJA NO RECURRENTE'
+                # Observacion Isapre -> Captura si >= 3 atenciones
+                idx_isapre_captura = (df['ESTADO_PERCAPITA'] == 'OBSERVACION ISAPRE TEMP') & (df['TEMP_ANIO_AGENDA'] == max_anio_eval) & (df['CANT_ATENCIONES'] >= 3)
+                df.loc[idx_isapre_captura, 'ESTADO_PERCAPITA'] = 'CAPTURA POTENCIAL'
+                
+                df.loc[df['ESTADO_PERCAPITA'].isin(['FUGA RECURRENTE TEMP', 'CAPTURA POTENCIAL TEMP', 'OBSERVACION ISAPRE TEMP']), 'ESTADO_PERCAPITA'] = 'BAJA NO RECURRENTE'
             else:
                 df.loc[df['ESTADO_PERCAPITA'] == 'FUGA RECURRENTE TEMP', 'ESTADO_PERCAPITA'] = 'FUGA RECURRENTE'
                 df.loc[df['ESTADO_PERCAPITA'] == 'CAPTURA POTENCIAL TEMP', 'ESTADO_PERCAPITA'] = 'CAPTURA POTENCIAL'
+                df.loc[df['ESTADO_PERCAPITA'] == 'OBSERVACION ISAPRE TEMP', 'ESTADO_PERCAPITA'] = 'CAPTURA POTENCIAL'
 
         # Filtrar solo pendientes, alertas, fugas, capturas y rechazos
         df_rescate = df[df['ESTADO_PERCAPITA'].isin(["PENDIENTE INSCRIPCION", "ALERTA RECAPTURA", "FUGA RECURRENTE", "CAPTURA POTENCIAL", "RECHAZO PREVISIONAL"])].copy()
@@ -1735,6 +1751,8 @@ else:
                         "Fallecido", 
                         "No Contesta / Inubicable",
                         "Rechaza Inscripción",
+                        "Observación: Paciente Isapre",
+                        "Observación: Carencia / Bloqueo Fonasa",
                         "Otro"
                     ])
                     
