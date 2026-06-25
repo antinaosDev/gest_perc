@@ -201,16 +201,39 @@ def get_demographic_data(url_demographic, url_rescates, client):
                     
                     bajas_terminales = []
                     fugas_recurrentes = []
+                    capturas_potenciales = []
+                    
+                    import re
                     
                     for _, row in df_bajas.iterrows():
                         rut = row['RUT_CLEAN']
                         cat = str(row.get('CATEGORIA', '')).upper()
+                        obs = str(row.get('OBSERVACION', ''))
+                        
                         if 'FALLECIDO' in cat:
                             bajas_terminales.append(rut)
+                            continue
+                            
+                        es_captura_potencial = False
+                        if 'OTRO CENTRO' in cat:
+                            if '[ACREDITA_DOMICILIO: SI]' in obs:
+                                es_captura_potencial = True
+                            else:
+                                match = re.search(r'\[VENCE_BLOQUEO:\s*(\d{4}-\d{2})\]', obs)
+                                if match:
+                                    vence_str = match.group(1) + "-01"
+                                    fecha_vence = pd.to_datetime(vence_str, errors='coerce')
+                                    fecha_eval = dem_data.get('fecha_corte_oficial', pd.to_datetime('today'))
+                                    if not pd.isna(fecha_vence) and fecha_eval >= fecha_vence:
+                                        es_captura_potencial = True
+                                        
+                        if es_captura_potencial:
+                            capturas_potenciales.append(rut)
                         else:
                             fugas_recurrentes.append(rut)
                             
                     dem_data['fugas_recurrentes'] = set(fugas_recurrentes)
+                    dem_data['capturas_potenciales'] = set(capturas_potenciales)
                     
                     df_bajas_terminales = pd.DataFrame({'RUT_CLEAN': bajas_terminales, 'ESTA_PERCAPITADO': 'SI'})
                     
@@ -338,11 +361,14 @@ def get_rescate_data(config):
         if 'RUT' in df.columns:
             df['RUT_CLEAN'] = df['RUT'].apply(normalize_rut)
             
-            # Cruce Sector
-            if not dem_info['sector'].empty:
+            conteo_atenciones = df.groupby('RUT_CLEAN').size().reset_index(name='CANT_ATENCIONES')
+            df = df.merge(conteo_atenciones, on='RUT_CLEAN', how='left')
+
+        # Si tenemos info de Excel percapita/rescates cruzamos
+        if not dem_info['sector'].empty:
                 df = df.merge(dem_info['sector'], on='RUT_CLEAN', how='left')
                 df['SECTOR'] = df['SECTOR'].fillna('Sin Sector')
-            else:
+        else:
                 df['SECTOR'] = 'Sin Info'
 
             # Cruce Percapita
@@ -355,24 +381,31 @@ def get_rescate_data(config):
                 
             alertas_recaptura = dem_info.get('alertas_recaptura', set())
             fugas_recurrentes = dem_info.get('fugas_recurrentes', set())
+            capturas_potenciales = dem_info.get('capturas_potenciales', set())
             
             df.loc[(df['ESTADO_PERCAPITA'] == 'PENDIENTE INSCRIPCION') & (df['RUT_CLEAN'].isin(alertas_recaptura)), 'ESTADO_PERCAPITA'] = 'ALERTA RECAPTURA'
-            
+            df.loc[(df['ESTADO_PERCAPITA'] == 'PENDIENTE INSCRIPCION') & (df['RUT_CLEAN'].isin(capturas_potenciales)), 'ESTADO_PERCAPITA'] = 'CAPTURA POTENCIAL TEMP'
             df.loc[(df['ESTADO_PERCAPITA'] == 'PENDIENTE INSCRIPCION') & (df['RUT_CLEAN'].isin(fugas_recurrentes)), 'ESTADO_PERCAPITA'] = 'FUGA RECURRENTE TEMP'
             
             if 'FECHA_AGENDADA' in df.columns:
                 df['TEMP_ANIO_AGENDA'] = pd.to_datetime(df['FECHA_AGENDADA'].astype(str).str.split(' ').str[0], errors='coerce', dayfirst=True).dt.year
                 max_anio_eval = dem_info.get('max_anio_percapita', datetime.now().year)
                 
-                idx_fuga = (df['ESTADO_PERCAPITA'] == 'FUGA RECURRENTE TEMP') & (df['TEMP_ANIO_AGENDA'] == max_anio_eval)
+                # Fugas recurrentes: >= 3 atenciones
+                idx_fuga = (df['ESTADO_PERCAPITA'] == 'FUGA RECURRENTE TEMP') & (df['TEMP_ANIO_AGENDA'] == max_anio_eval) & (df['CANT_ATENCIONES'] >= 3)
                 df.loc[idx_fuga, 'ESTADO_PERCAPITA'] = 'FUGA RECURRENTE'
                 
-                df.loc[df['ESTADO_PERCAPITA'] == 'FUGA RECURRENTE TEMP', 'ESTADO_PERCAPITA'] = 'BAJA NO RECURRENTE'
+                # Capturas potenciales: >= 2 atenciones
+                idx_captura = (df['ESTADO_PERCAPITA'] == 'CAPTURA POTENCIAL TEMP') & (df['TEMP_ANIO_AGENDA'] == max_anio_eval) & (df['CANT_ATENCIONES'] >= 2)
+                df.loc[idx_captura, 'ESTADO_PERCAPITA'] = 'CAPTURA POTENCIAL'
+                
+                df.loc[df['ESTADO_PERCAPITA'].isin(['FUGA RECURRENTE TEMP', 'CAPTURA POTENCIAL TEMP']), 'ESTADO_PERCAPITA'] = 'BAJA NO RECURRENTE'
             else:
                 df.loc[df['ESTADO_PERCAPITA'] == 'FUGA RECURRENTE TEMP', 'ESTADO_PERCAPITA'] = 'FUGA RECURRENTE'
+                df.loc[df['ESTADO_PERCAPITA'] == 'CAPTURA POTENCIAL TEMP', 'ESTADO_PERCAPITA'] = 'CAPTURA POTENCIAL'
 
-        # Filtrar solo pendientes, alertas y fugas
-        df_rescate = df[df['ESTADO_PERCAPITA'].isin(["PENDIENTE INSCRIPCION", "ALERTA RECAPTURA", "FUGA RECURRENTE"])].copy()
+        # Filtrar solo pendientes, alertas, fugas y capturas
+        df_rescate = df[df['ESTADO_PERCAPITA'].isin(["PENDIENTE INSCRIPCION", "ALERTA RECAPTURA", "FUGA RECURRENTE", "CAPTURA POTENCIAL"])].copy()
         
         # Seleccionar columnas útiles (SIN INFO CLÍNICA)
         # Se elimina EDAD_NUM de la visualización, se usa solo EDAD_ACTUAL
@@ -1165,7 +1198,8 @@ st.markdown("""
     <ul style="color: #555; font-size: 0.95rem; line-height: 1.5; margin-bottom: 0; padding-left: 20px;">
         <li><strong>Pendiente Inscripción:</strong> Pacientes nuevos que no aparecen en el padrón actual.</li>
         <li><strong>Alerta Recaptura (🚨):</strong> Pacientes que inscribiste/rescataste en el pasado, pero que de manera anómala <strong>volvieron a desaparecer</strong> en el padrón actual. Es crítico volver a contactarlos porque la inscripción debía durar 1 año.</li>
-        <li><strong>Fuga Recurrente (🔄):</strong> Pacientes que habías dado de baja (Ej: "Rechaza inscripción"), pero que <strong>siguen agendando horas en el año en curso</strong>. Aparecen para que intentes recapturarlos aprovechando su alta concurrencia.</li>
+        <li><strong>Fuga Recurrente (🔄):</strong> Pacientes que habías dado de baja (Ej: "Rechaza inscripción"), pero que <strong>acumulan 3 o más atenciones en el año en curso</strong>. Aparecen para que intentes recapturarlos aprovechando su alta concurrencia.</li>
+        <li><strong>Captura Potencial (🟢):</strong> Pacientes inscritos en otro centro que ya cumplieron su bloqueo legal de 1 año (o justificaron domicilio) y que acumulan 2 o más atenciones. ¡Es el momento legal para capturarlos!</li>
     </ul>
     <p style="color: #555; font-size: 0.9rem; margin-top: 10px; margin-bottom: 0;"><em>👉 Puedes identificar qué tipo de problema tiene cada paciente mirando la columna <strong>"Estado (Fugas)"</strong> en la tabla de la pestaña "Nómina Estratégica".</em></p>
 </div>
@@ -1201,6 +1235,7 @@ else:
     # Conteo de subestados
     conteo_fugas = df_filtered[df_filtered['ESTADO_PERCAPITA'] == 'FUGA RECURRENTE']['RUT_CLEAN'].nunique() if 'ESTADO_PERCAPITA' in df_filtered.columns else 0
     conteo_alertas = df_filtered[df_filtered['ESTADO_PERCAPITA'] == 'ALERTA RECAPTURA']['RUT_CLEAN'].nunique() if 'ESTADO_PERCAPITA' in df_filtered.columns else 0
+    conteo_capturas = df_filtered[df_filtered['ESTADO_PERCAPITA'] == 'CAPTURA POTENCIAL']['RUT_CLEAN'].nunique() if 'ESTADO_PERCAPITA' in df_filtered.columns else 0
     
     # 1. KPIs Visuales
     c1, c2, c3 = st.columns(3)
@@ -1215,8 +1250,8 @@ else:
             </div>
             <p class="kpi-label">Brecha a Gestionar</p>
             <p class="kpi-value" style="margin-bottom: 5px;">{df_filtered[rut_col].nunique()}</p>
-            <p style="font-size:0.85rem; color:#888; margin-top:0px; font-weight:500;">
-                🔄 {conteo_fugas} Fugas Recurrentes | 🚨 {conteo_alertas} Alertas
+            <p style="font-size:0.8rem; color:#888; margin-top:0px; font-weight:500;">
+                🔄 {conteo_fugas} Fugas | 🚨 {conteo_alertas} Alertas | 🟢 {conteo_capturas} Capturas
             </p>
         </div>""", unsafe_allow_html=True)
     with c2:
@@ -1630,6 +1665,15 @@ else:
                         "Rechaza Inscripción",
                         "Otro"
                     ])
+                    
+                    fecha_inscrip_otro = None
+                    acredita_domicilio = False
+                    if categoria == "Inscrito en Otro Centro":
+                        st.markdown("<div style='background-color: #FFF3CD; padding: 10px; border-radius: 5px; margin-bottom: 10px;'>", unsafe_allow_html=True)
+                        st.markdown("<strong style='color:#856404;'>ℹ️ Datos para Excepción de Bloqueo (1 Año)</strong>", unsafe_allow_html=True)
+                        fecha_inscrip_otro = st.date_input("Fecha aprox. de inscripción en su centro actual (Si la conoce)", value=None, min_value=datetime(2000, 1, 1))
+                        acredita_domicilio = st.checkbox("¿Acredita cambio de domicilio laboral o particular con documento?")
+                        st.markdown("</div>", unsafe_allow_html=True)
                     obs = st.text_area("Detalles Adicionales (Opcional)")
                     
                     if st.form_submit_button("Confirmar Rescate/Gestión", type="primary", use_container_width=True):
@@ -1664,7 +1708,16 @@ else:
                                 observacion_final = f"[{categoria}] {obs}" if obs else categoria
                                 row = [nombre, centro, rut_val, anio, mes, categoria, observacion_final, fecha_rescate, usuario_gestor]
                             else:
-                                row = [nombre, centro, rut_val, anio, mes, categoria, obs, fecha_rescate, usuario_gestor]
+                                obs_final = obs
+                                if categoria == "Inscrito en Otro Centro":
+                                    if acredita_domicilio:
+                                        obs_final = f"[ACREDITA_DOMICILIO: SI] {obs_final}"
+                                    elif fecha_inscrip_otro:
+                                        vence_dt = fecha_inscrip_otro + pd.DateOffset(years=1)
+                                        vence_str = vence_dt.strftime("%Y-%m")
+                                        obs_final = f"[VENCE_BLOQUEO: {vence_str}] {obs_final}"
+                                        
+                                row = [nombre, centro, rut_val, anio, mes, categoria, obs_final, fecha_rescate, usuario_gestor]
                                 
                             ws_target.append_row(row)
                             
