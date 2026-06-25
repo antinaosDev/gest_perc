@@ -1527,7 +1527,34 @@ else:
                     st.markdown(f"**{label} ({len(df_st_unique)} pacientes):**")
                     for _, row in df_st_unique.iterrows():
                         nombre = row.get('NOMBRE_PACIENTE', 'Sin Nombre')
-                        st.markdown(f"- `{row['RUT']}` - {nombre}")
+                        
+                        razon = ""
+                        if estado_db == 'CAPTURA POTENCIAL':
+                            cant = row.get('CANT_ATENCIONES', 0)
+                            b_raw = APP_CONFIG.get('datos', {}).get('bajas_crudas', pd.DataFrame())
+                            rut_clean = row.get('RUT_CLEAN', '')
+                            if not b_raw.empty and rut_clean != '':
+                                match_baja = b_raw[b_raw['RUT_CLEAN'] == rut_clean]
+                                if not match_baja.empty:
+                                    ultimo_registro = match_baja.iloc[-1]
+                                    cat = str(ultimo_registro.get('CATEGORIA', '')).upper()
+                                    obs = str(ultimo_registro.get('OBSERVACION', '')).upper()
+                                    
+                                    if 'ISAPRE' in cat:
+                                        razon = f" *(Paciente Isapre con {cant} atenciones)*"
+                                    elif '[ACREDITA_DOMICILIO: SI]' in obs:
+                                        razon = " *(Acredita cambio de domicilio)*"
+                                    elif '[VENCE_BLOQUEO' in obs:
+                                        import re
+                                        m = re.search(r'\[VENCE_BLOQUEO:\s*(\d{4}-\d{2})\]', obs)
+                                        v = m.group(1) if m else 'Fecha'
+                                        razon = f" *(Venció bloqueo de 1 año en {v})*"
+                                        if cant >= 3:
+                                            razon += f" y tiene {cant} atenciones"
+                            if not razon and cant >= 3:
+                                razon = f" *(Cumple {cant} atenciones en el año)*"
+                                
+                        st.markdown(f"- `{row['RUT']}` - {nombre} <span style='color: #28a745; font-size: 0.85rem;'>{razon}</span>", unsafe_allow_html=True)
                     st.markdown("")
         
         if not hay_datos:
