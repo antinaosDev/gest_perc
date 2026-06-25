@@ -364,11 +364,12 @@ def get_rescate_data(config):
             conteo_atenciones = df.groupby('RUT_CLEAN').size().reset_index(name='CANT_ATENCIONES')
             df = df.merge(conteo_atenciones, on='RUT_CLEAN', how='left')
 
-        # Si tenemos info de Excel percapita/rescates cruzamos
-        if not dem_info['sector'].empty:
+        if dem_info:
+            # Cruce Sector
+            if not dem_info['sector'].empty:
                 df = df.merge(dem_info['sector'], on='RUT_CLEAN', how='left')
                 df['SECTOR'] = df['SECTOR'].fillna('Sin Sector')
-        else:
+            else:
                 df['SECTOR'] = 'Sin Info'
 
             # Cruce Percapita
@@ -395,8 +396,8 @@ def get_rescate_data(config):
                 idx_fuga = (df['ESTADO_PERCAPITA'] == 'FUGA RECURRENTE TEMP') & (df['TEMP_ANIO_AGENDA'] == max_anio_eval) & (df['CANT_ATENCIONES'] >= 3)
                 df.loc[idx_fuga, 'ESTADO_PERCAPITA'] = 'FUGA RECURRENTE'
                 
-                # Capturas potenciales: >= 2 atenciones
-                idx_captura = (df['ESTADO_PERCAPITA'] == 'CAPTURA POTENCIAL TEMP') & (df['TEMP_ANIO_AGENDA'] == max_anio_eval) & (df['CANT_ATENCIONES'] >= 2)
+                # Capturas potenciales: >= 3 atenciones
+                idx_captura = (df['ESTADO_PERCAPITA'] == 'CAPTURA POTENCIAL TEMP') & (df['TEMP_ANIO_AGENDA'] == max_anio_eval) & (df['CANT_ATENCIONES'] >= 3)
                 df.loc[idx_captura, 'ESTADO_PERCAPITA'] = 'CAPTURA POTENCIAL'
                 
                 df.loc[df['ESTADO_PERCAPITA'].isin(['FUGA RECURRENTE TEMP', 'CAPTURA POTENCIAL TEMP']), 'ESTADO_PERCAPITA'] = 'BAJA NO RECURRENTE'
@@ -1199,7 +1200,7 @@ st.markdown("""
         <li><strong>Pendiente Inscripción:</strong> Pacientes nuevos que no aparecen en el padrón actual.</li>
         <li><strong>Alerta Recaptura (🚨):</strong> Pacientes que inscribiste/rescataste en el pasado, pero que de manera anómala <strong>volvieron a desaparecer</strong> en el padrón actual. Es crítico volver a contactarlos porque la inscripción debía durar 1 año.</li>
         <li><strong>Fuga Recurrente (🔄):</strong> Pacientes que habías dado de baja (Ej: "Rechaza inscripción"), pero que <strong>acumulan 3 o más atenciones en el año en curso</strong>. Aparecen para que intentes recapturarlos aprovechando su alta concurrencia.</li>
-        <li><strong>Captura Potencial (🟢):</strong> Pacientes inscritos en otro centro que ya cumplieron su bloqueo legal de 1 año (o justificaron domicilio) y que acumulan 2 o más atenciones. ¡Es el momento legal para capturarlos!</li>
+        <li><strong>Captura Potencial (🟢):</strong> Pacientes inscritos en otro centro que ya cumplieron su bloqueo legal de 1 año (o justificaron domicilio) y que acumulan 3 o más atenciones. ¡Es el momento legal para capturarlos!</li>
     </ul>
     <p style="color: #555; font-size: 0.9rem; margin-top: 10px; margin-bottom: 0;"><em>👉 Puedes identificar qué tipo de problema tiene cada paciente mirando la columna <strong>"Estado (Fugas)"</strong> en la tabla de la pestaña "Nómina Estratégica".</em></p>
 </div>
@@ -1668,9 +1669,12 @@ else:
                     
                     fecha_inscrip_otro = None
                     acredita_domicilio = False
-                    if categoria == "Inscrito en Otro Centro":
+                    # Mostrar campos adicionales solo si el paciente cumple los requisitos cronologicos de recurrencia (>= 3 atenciones)
+                    cant_aten = paciente_data.get('CANT_ATENCIONES', 1)
+                    if categoria == "Inscrito en Otro Centro" and cant_aten >= 3:
                         st.markdown("<div style='background-color: #FFF3CD; padding: 10px; border-radius: 5px; margin-bottom: 10px;'>", unsafe_allow_html=True)
                         st.markdown("<strong style='color:#856404;'>ℹ️ Datos para Excepción de Bloqueo (1 Año)</strong>", unsafe_allow_html=True)
+                        st.markdown(f"<p style='font-size:0.85rem; color:#666; margin-bottom: 5px;'>Este paciente tiene {cant_aten} atenciones y es candidato a Captura Potencial si su año venció.</p>", unsafe_allow_html=True)
                         fecha_inscrip_otro = st.date_input("Fecha aprox. de inscripción en su centro actual (Si la conoce)", value=None, min_value=datetime(2000, 1, 1))
                         acredita_domicilio = st.checkbox("¿Acredita cambio de domicilio laboral o particular con documento?")
                         st.markdown("</div>", unsafe_allow_html=True)
