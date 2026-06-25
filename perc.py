@@ -1002,7 +1002,8 @@ if app_mode == "📊 Análisis Archivo Percápita":
                             df_grouped = df_filtrado.groupby('ANIO_CORTE')['RUT'].count().reset_index()
                             df_grouped.columns = ['Año', 'Inscritos']
                             st.markdown(f"### Evolución de Inscritos - Corte: {mes_corte_seleccionado}")
-                            fig = px.bar(df_grouped, x='Año', y='Inscritos', text_auto=True, color='Año')
+                            fig = px.bar(df_grouped, x='Año', y='Inscritos', text_auto=True, color_discrete_sequence=['#00A8E8'])
+                            fig.update_traces(marker_line_color='rgb(8,48,107)', marker_line_width=1.5, opacity=0.8)
                             fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
                             st.plotly_chart(fig, width='stretch', theme=None)
 
@@ -1077,7 +1078,8 @@ if app_mode == "📊 Análisis Archivo Percápita":
                         df_filtrado_f = df_fall[(df_fall['ANIO_CORTE'] >= anio_inicio_f) & (df_fall['ANIO_CORTE'] <= anio_fin_f)]
                         df_grouped_f = df_filtrado_f.groupby('ANIO_CORTE')['RUT'].count().reset_index()
                         df_grouped_f.columns = ['Año', 'Fallecidos']
-                        fig_f = px.bar(df_grouped_f, x='Año', y='Fallecidos', text_auto=True, color='Año')
+                        fig_f = px.bar(df_grouped_f, x='Año', y='Fallecidos', text_auto=True, color_discrete_sequence=['#00A8E8'])
+                        fig_f.update_traces(marker_line_color='rgb(8,48,107)', marker_line_width=1.5, opacity=0.8)
                         fig_f.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
                         st.plotly_chart(fig_f, width='stretch', theme=None)
                         st.markdown("#### Configuración de Exportación 📥")
@@ -1096,7 +1098,8 @@ if app_mode == "📊 Análisis Archivo Percápita":
                         df_filtrado_r = df_rech[(df_rech['ANIO_CORTE'] >= anio_inicio_r) & (df_rech['ANIO_CORTE'] <= anio_fin_r)]
                         df_grouped_r = df_filtrado_r.groupby('ANIO_CORTE')['RUT'].count().reset_index()
                         df_grouped_r.columns = ['Año', 'Rechazados']
-                        fig_r = px.bar(df_grouped_r, x='Año', y='Rechazados', text_auto=True, color='Año')
+                        fig_r = px.bar(df_grouped_r, x='Año', y='Rechazados', text_auto=True, color_discrete_sequence=['#00A8E8'])
+                        fig_r.update_traces(marker_line_color='rgb(8,48,107)', marker_line_width=1.5, opacity=0.8)
                         fig_r.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
                         st.plotly_chart(fig_r, width='stretch', theme=None)
                         st.markdown("#### Configuración de Exportación 📥")
