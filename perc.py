@@ -1133,7 +1133,7 @@ st.markdown(f"""
         📅 Padrón Percápita Evaluado: {mes_eval} {anio_eval}
     </p>
     <p style="margin: 0; color: #555; font-size: 0.9em;">
-        El cálculo de brechas se realiza cruzando las atenciones contra los inscritos oficiales de este corte.
+        El cálculo de brechas se realiza cruzando las atenciones contra los inscritos oficiales de este corte. (El sistema utiliza el último día del mes evaluado como límite cronológico).
     </p>
 </div>
 """, unsafe_allow_html=True)
@@ -1147,6 +1147,15 @@ st.markdown("""
         <strong>no figuran inscritos en la base de datos Percápita del corte actual</strong>. Utilice esta herramienta para identificar 
         oportunidades de rescate, coordinar con los profesionales y asegurar el correcto registro de la población a cargo.
     </p>
+</div>
+<div class="info-card" style="margin-top: 15px; border-left: 4px solid #FB8500;">
+    <h4 style="margin-top:0; color: #2C3E50;">⚠️ Guía de Estados de Pacientes</h4>
+    <ul style="color: #555; font-size: 0.95rem; line-height: 1.5; margin-bottom: 0; padding-left: 20px;">
+        <li><strong>Pendiente Inscripción:</strong> Pacientes nuevos que no aparecen en el padrón actual.</li>
+        <li><strong>Fuga Recurrente (🔄):</strong> Pacientes que tú rescataste y categorizaste en meses anteriores, pero que <strong>volvieron a desaparecer</strong> en el padrón actual (Ej: Su inscripción rebotó, o se cambiaron a otro centro recientemente). Es crítico volver a contactarlos.</li>
+        <li><strong>Alerta Recaptura (🚨):</strong> Pacientes que habías dado de baja (Ej: "Rechaza inscripción"), pero que <strong>siguen agendando horas y atendiéndose en tu CESFAM</strong> hoy en día. Aparecen para que intentes recapturarlos aprovechando su nueva visita. (Los fallecidos se ocultan permanentemente).</li>
+    </ul>
+    <p style="color: #555; font-size: 0.9rem; margin-top: 10px; margin-bottom: 0;"><em>👉 Puedes identificar qué tipo de problema tiene cada paciente mirando la columna <strong>"Estado (Fugas)"</strong> en la tabla de la pestaña "Nómina Estratégica".</em></p>
 </div>
 """, unsafe_allow_html=True)
 
