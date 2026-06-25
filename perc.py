@@ -1432,17 +1432,21 @@ else:
         df_rescate['ESTADO'] = df_rescate['ESTADO'].fillna("NO INFORMADO")
 
     # FILTROS EN SIDEBAR
-    with st.sidebar:
-        st.markdown("---")
-        st.markdown("### 🔍 Filtros Interactivos")
+    sector_sel = "Todos"
+    prof_sel = "Todos"
+    
+    if APP_CONFIG['rol'] not in ['PROF_UNIDAD', 'JEFE_UNIDAD']:
+        with st.sidebar:
+            st.markdown("---")
+            st.markdown("### 🔍 Filtros Interactivos")
 
-        sectores = ["Todos"] + sorted(df_rescate['SECTOR'].dropna().unique().tolist())
-        sector_sel = st.selectbox("Filtrar por Sector", sectores)
-        
-        profesionales = ["Todos"]
-        if 'NOMBRE_PROFESIONAL' in df_rescate.columns:
-            profesionales += sorted(df_rescate['NOMBRE_PROFESIONAL'].dropna().unique().tolist())
-        prof_sel = st.selectbox("Filtrar por Profesional", profesionales)
+            sectores = ["Todos"] + sorted(df_rescate['SECTOR'].dropna().unique().tolist())
+            sector_sel = st.selectbox("Filtrar por Sector", sectores)
+            
+            profesionales = ["Todos"]
+            if 'NOMBRE_PROFESIONAL' in df_rescate.columns:
+                profesionales += sorted(df_rescate['NOMBRE_PROFESIONAL'].dropna().unique().tolist())
+            prof_sel = st.selectbox("Filtrar por Profesional", profesionales)
         
     df_filtered = df_rescate.copy()
     if sector_sel != "Todos":
