@@ -85,12 +85,13 @@ def normalize_rut(rut):
     if len(rut) < 2: return "INVALIDO"
     return rut
 
-def get_demographic_data(url_demographic, url_rescates, client):
+@st.cache_data(ttl=600, show_spinner=False)
+def get_demographic_data(url_demographic, url_rescates, _client):
     """Carga bases secundarias (Sector y Percápita)."""
     dem_data = {'sector': pd.DataFrame(), 'percapita': pd.DataFrame()}
     try:
         if not url_demographic or len(url_demographic) < 10: return dem_data
-        sheet_dem = client.open_by_url(url_demographic)
+        sheet_dem = _client.open_by_url(url_demographic)
         
         # 1. Sector
         try:
@@ -147,7 +148,7 @@ def get_demographic_data(url_demographic, url_rescates, client):
         try:
             if not url_rescates or len(url_rescates) < 10:
                 raise ValueError("URL Rescates vacía o inválida")
-            sheet_rescates = client.open_by_url(url_rescates)
+            sheet_rescates = _client.open_by_url(url_rescates)
             try:
                 ws_rescates = sheet_rescates.worksheet("registro_rescates")
                 data_rescates = ws_rescates.get_all_records()
@@ -249,6 +250,7 @@ def get_demographic_data(url_demographic, url_rescates, client):
     except: pass
     return dem_data
 
+@st.cache_data(ttl=600, show_spinner=False)
 def load_app_configuration(account_id):
     """Carga configuración y LOGOS desde Admin."""
     config = {'valido': False, 'mensaje': '', 'datos': {}, 'credenciales': None, 'imagenes': {}}
@@ -1412,7 +1414,7 @@ else:
                 
             if 'FECHA_AGENDADA' in df_filtered.columns:
                 df_time = df_filtered.dropna(subset=['FECHA_AGENDADA']).copy()
-                df_time['FECHA'] = pd.to_datetime(df_time['FECHA_AGENDADA'].astype(str).str.split(' ').str[0], errors='coerce')
+                df_time['FECHA'] = pd.to_datetime(df_time['FECHA_AGENDADA'].astype(str).str.split(' ').str[0], format='%d/%m/%Y', errors='coerce')
                 df_time = df_time.dropna(subset=['FECHA'])
                 if not df_time.empty:
                     df_time['MES'] = df_time['FECHA'].dt.strftime('%Y-%m')
@@ -1450,7 +1452,7 @@ else:
                 if 'HORA_AGENDADA' in df_sorted.columns:
                     hora_base = df_sorted['HORA_AGENDADA'].astype(str).replace({'nan': '00:00', 'None': '00:00', '': '00:00'})
                     df_sorted['FECHA_HORA_STR'] = fecha_base + ' ' + hora_base
-                    df_sorted['FECHA_HORA'] = pd.to_datetime(df_sorted['FECHA_HORA_STR'], errors='coerce', dayfirst=True)
+                    df_sorted['FECHA_HORA'] = pd.to_datetime(df_sorted['FECHA_HORA_STR'], format='mixed', dayfirst=True, errors='coerce')
                 else:
                     df_sorted['FECHA_HORA'] = pd.to_datetime(fecha_base, errors='coerce', dayfirst=True)
                     
@@ -1609,7 +1611,7 @@ else:
                 if 'HORA_AGENDADA' in df_ordenado_4.columns:
                     hora_b = df_ordenado_4['HORA_AGENDADA'].astype(str).replace({'nan': '00:00', 'None': '00:00', '': '00:00'})
                     df_ordenado_4['FECHA_HORA_STR'] = fecha_b + ' ' + hora_b
-                    df_ordenado_4['FECHA_HORA'] = pd.to_datetime(df_ordenado_4['FECHA_HORA_STR'], errors='coerce', dayfirst=True)
+                    df_ordenado_4['FECHA_HORA'] = pd.to_datetime(df_ordenado_4['FECHA_HORA_STR'], format='mixed', dayfirst=True, errors='coerce')
                 else:
                     df_ordenado_4['FECHA_HORA'] = pd.to_datetime(fecha_b, errors='coerce', dayfirst=True)
                 idx_nat = df_ordenado_4['FECHA_HORA'].isna() & (fecha_b != '')
