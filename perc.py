@@ -266,13 +266,9 @@ def get_demographic_data(url_demographic, url_rescates, _client):
                     dem_data['fugas_recurrentes'] = set(fugas_recurrentes)
                     dem_data['capturas_potenciales'] = set(capturas_potenciales)
                     
-                    df_bajas_terminales = pd.DataFrame({'RUT_CLEAN': bajas_terminales, 'ESTA_PERCAPITADO': 'SI'})
-                    
-                    if not df_bajas_terminales.empty:
-                        if not dem_data['percapita'].empty:
-                            dem_data['percapita'] = pd.concat([dem_data['percapita'], df_bajas_terminales]).drop_duplicates(subset=['RUT_CLEAN'])
-                        else:
-                            dem_data['percapita'] = df_bajas_terminales
+                    # Añadir fallecidos manuales al set de fallecidos históricos
+                    hist = dem_data.get('fallecidos_historicos', set())
+                    dem_data['fallecidos_historicos'] = hist.union(set(bajas_terminales))
             except gspread.exceptions.WorksheetNotFound:
                 dem_data['bajas_crudas'] = pd.DataFrame()
 
