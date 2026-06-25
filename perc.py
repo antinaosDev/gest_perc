@@ -470,6 +470,11 @@ def get_rescate_data(config):
 st.set_page_config(page_title="Gestión Percápita | CESFAM Cholchol", page_icon="🏥", layout="wide")
 APP_CONFIG = load_app_configuration(MASTER_ACCOUNT_ID)
 
+# Inyección de Rol Simulado (Solo para Programadores)
+if APP_CONFIG.get('rol_real') == 'PROGRAMADOR' and 'simulated_role' in st.session_state:
+    APP_CONFIG['rol'] = st.session_state['simulated_role']
+
+
 # AUDITORIA DE LOGIN (Se registra solo 1 vez por sesion)
 if APP_CONFIG.get('valido', False) and not st.session_state.get('auditoria_login_registrado', False):
     try:
