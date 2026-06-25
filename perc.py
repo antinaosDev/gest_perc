@@ -2044,13 +2044,18 @@ else:
                                         
                                     row = [nombre, centro, rut_val, anio, mes, categoria, obs_final, fecha_rescate, usuario_gestor]
                                 
-                                # PREVENCION DE DUPLICADOS EN TIEMPO REAL
-                                col_ruts = ws_target.col_values(3)
-                                ruts_limpios = [normalize_rut(str(r)) for r in col_ruts]
+                                # PREVENCION DE DUPLICADOS EN TIEMPO REAL (En ambas hojas)
+                                ruts_bloqueados = []
+                                for sheet_name in ["registro_rescates", "bajas_percapita"]:
+                                    try:
+                                        ws_temp = sheet_rescates.worksheet(sheet_name)
+                                        ruts_bloqueados.extend([normalize_rut(str(r)) for r in ws_temp.col_values(3)])
+                                    except: pass
+                                
                                 rut_clean_val = normalize_rut(rut_val)
                                 
-                                if rut_clean_val in ruts_limpios:
-                                    st.error(f"⚠️ ¡ALERTA! El paciente {rut_val} acaba de ser gestionado por otro funcionario. Actualizando base de datos...")
+                                if rut_clean_val in ruts_bloqueados:
+                                    st.error(f"⚠️ ¡ALERTA! El paciente {rut_val} acaba de ser gestionado por otro funcionario en otra sesión. Actualizando base de datos...")
                                     st.cache_data.clear()
                                     time.sleep(3)
                                     st.rerun()
