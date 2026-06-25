@@ -758,13 +758,13 @@ if not st.session_state.logged_in:
             col_l, col_img, col_r = st.columns([1, 1.5, 1])
             with col_img:
                 if os.path.exists("logo_noti.png"):
-                    st.image("logo_noti.png", use_container_width=True)
+                    st.image("logo_noti.png", width='stretch')
                 elif APP_CONFIG['imagenes'].get('LOGO_NOTI'):
-                    st.image(APP_CONFIG['imagenes']['LOGO_NOTI'], use_container_width=True)
+                    st.image(APP_CONFIG['imagenes']['LOGO_NOTI'], width='stretch')
                 else:
                     fallback_url = procesar_imagen_drive(DEFAULT_LOGO_NOTI)
                     if fallback_url:
-                        st.image(fallback_url, use_container_width=True)
+                        st.image(fallback_url, width='stretch')
                     else:
                         st.markdown('<div style="font-size: 50px; text-align: center;">🏥</div>', unsafe_allow_html=True)
             
@@ -806,13 +806,13 @@ if not APP_CONFIG['valido']:
 # --- SIDEBAR (CON LOGO APP) ---
 with st.sidebar:
     if os.path.exists("logo_noti.png"):
-        st.image("logo_noti.png", use_container_width=True)
+        st.image("logo_noti.png", width='stretch')
     elif APP_CONFIG['imagenes'].get('LOGO_NOTI'):
-        st.image(APP_CONFIG['imagenes']['LOGO_NOTI'], use_container_width=True)
+        st.image(APP_CONFIG['imagenes']['LOGO_NOTI'], width='stretch')
     else:
         fallback_url = procesar_imagen_drive(DEFAULT_LOGO_NOTI)
         if fallback_url:
-            st.image(fallback_url, use_container_width=True)
+            st.image(fallback_url, width='stretch')
         else:
             st.markdown('<div style="font-size: 50px; text-align: center; margin-bottom: 20px;">🏥<br><span style="font-size: 24px; font-weight: bold; color: #0EA5E9; font-family: sans-serif;">MEDTIFY</span></div>', unsafe_allow_html=True)
     
@@ -944,7 +944,7 @@ if app_mode == "📊 Análisis Archivo Percápita":
 
     col1, col2 = st.columns([1, 6])
     with col1:
-        st.image("https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExeDl4a2pzZjUyaDVpdXYwZzBjdTNibjU5NDFkZmZhdHU2Ymo1djBqOSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/nNOAPjUdo4mpZFkDf8/giphy.gif", use_container_width=True)
+        st.image("https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExeDl4a2pzZjUyaDVpdXYwZzBjdTNibjU5NDFkZmZhdHU2Ymo1djBqOSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/nNOAPjUdo4mpZFkDf8/giphy.gif", width='stretch')
     with col2:
         st.subheader('Cargar reporte percapita')
         archivos = st.file_uploader('Selecciona los archivos (CSV, TXT)', type=['csv', 'txt'], accept_multiple_files=True)
@@ -958,7 +958,7 @@ if app_mode == "📊 Análisis Archivo Percápita":
 
         with st.expander("👁️ Ver vista previa de datos cargados"):
             st.markdown("#### Primeros 100 registros:")
-            st.dataframe(df_global.head(100), hide_index=True, use_container_width=True)
+            st.dataframe(df_global.head(100), hide_index=True, width='stretch')
 
         columnas_sesion = ["RUT", "NOMBRE_CENTRO", "NOMBRE_CENTRO_PROCEDENCIA", "NOMBRE_COMUNA_PROCEDENCIA", "NOMBRE_CENTRO_DESTINO", "NOMBRE_COMUNA_DESTINO", "ANIO_CORTE", "MES_CORTE", "LAT_CENTRO", "LONG_CENTRO"]
         cols_existentes = [c for c in columnas_sesion if c in df_auth.columns]
@@ -1003,7 +1003,7 @@ if app_mode == "📊 Análisis Archivo Percápita":
                             st.markdown(f"### Evolución de Inscritos - Corte: {mes_corte_seleccionado}")
                             fig = px.bar(df_grouped, x='Año', y='Inscritos', text_auto=True, color='Año')
                             fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
-                            st.plotly_chart(fig, use_container_width=True, theme=None)
+                            st.plotly_chart(fig, width='stretch', theme=None)
 
                             st.divider()
                             st.markdown("#### Configuración de Exportación y Reporte 📥")
@@ -1046,7 +1046,7 @@ if app_mode == "📊 Análisis Archivo Percápita":
                                                         df_procesado.loc[idx, 'EDAD'] = hoy.year - nueva_fecha.year - ((hoy.month, hoy.day) < (nueva_fecha.month, nueva_fecha.day))
                                             if df_procesado['FECHA_NACIMIENTO'].isnull().sum() == 0: st.success("✅ ¡Fechas corregidas!")
                                         
-                                        st.download_button(label="📥 Descargar CSV Consolidado", data=convert_df_to_csv(df_exportar), file_name=f'Inscritos_Percapita_{mes_corte_seleccionado}.csv', mime='text/csv', use_container_width=True)
+                                        st.download_button(label="📥 Descargar CSV Consolidado", data=convert_df_to_csv(df_procesado), file_name=f'Inscritos_Percapita_{mes_corte_seleccionado}.csv', mime='text/csv', width='stretch')
                                         
                                         df_estadistico = df_procesado.copy()
                                         if tipo_grupo in ["Personalizado (Años)", "Personalizado con Fracciones (Meses/Años)"]:
@@ -1058,7 +1058,7 @@ if app_mode == "📊 Análisis Archivo Percápita":
                                             
                                         if grupos_seleccionados: df_estadistico = df_estadistico[df_estadistico[col_agrupacion].isin(grupos_seleccionados)]
                                         try:
-                                            st.download_button(label="📊 Descargar Reporte Estadístico (Excel)", data=excel_data, file_name=f'Estadistica_{mes_corte_seleccionado}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+                                            st.download_button(label="📊 Descargar Reporte Estadístico (Excel)", data=excel_data, file_name=f'Estadistica_{mes_corte_seleccionado}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', width='stretch')
                                         except Exception as e: st.error(f"Error generando Excel: {e}")
                         else: st.warning("No hay datos.")
 
@@ -1073,8 +1073,8 @@ if app_mode == "📊 Análisis Archivo Percápita":
                         df_grouped_f.columns = ['Año', 'Fallecidos']
                         fig_f = px.bar(df_grouped_f, x='Año', y='Fallecidos', text_auto=True, color='Año')
                         fig_f.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
-                        st.plotly_chart(fig_f, use_container_width=True, theme=None)
-                        st.download_button(label="Descargar Nómina Fallecidos", data=convert_df_to_csv(df_filtrado_f), file_name="Fallecidos.csv", mime="text/csv", use_container_width=True)
+                        st.plotly_chart(fig_f, width='stretch', theme=None)
+                        st.download_button(label="Descargar Nómina Fallecidos", data=convert_df_to_csv(df_filtrado_f), file_name="Fallecidos.csv", mime="text/csv", width='stretch')
                 else: st.warning("Sin datos de fallecidos.")
 
         with tab3_p:
@@ -1106,15 +1106,15 @@ if app_mode == "📊 Análisis Archivo Percápita":
                 with g1: 
                     fig1 = px.funnel(df_filt.groupby(['RANGO_ETARIO', 'GENERO'])['RUT'].nunique().reset_index(), x='RUT', y='RANGO_ETARIO', color='GENERO', title='Clasificación Etaria')
                     fig1.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
-                    st.plotly_chart(fig1, use_container_width=True, theme=None)
+                    st.plotly_chart(fig1, width='stretch', theme=None)
                 with g2: 
                     fig2 = px.bar(df_filt.groupby(['TRAMO', 'GENERO'])['RUT'].nunique().reset_index(), x='TRAMO', y='RUT', text_auto=True, color='GENERO', barmode='group', title='Usuarios por Tramo')
                     fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
-                    st.plotly_chart(fig2, use_container_width=True, theme=None)
+                    st.plotly_chart(fig2, width='stretch', theme=None)
                 with g3: 
                     fig3 = px.bar(df_filt.groupby(['NOMBRE_CENTRO', 'GENERO'])['RUT'].nunique().reset_index(), x='NOMBRE_CENTRO', y='RUT', text_auto=True, color='GENERO', barmode='group', title='Usuarios por Centro')
                     fig3.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
-                    st.plotly_chart(fig3, use_container_width=True, theme=None)
+                    st.plotly_chart(fig3, width='stretch', theme=None)
 
                 with st.container(border=True):
                     st.subheader("Distribución Geográfica 🗺️")
@@ -1137,7 +1137,7 @@ if app_mode == "📊 Análisis Archivo Percápita":
                             else:
                                 fig_map = px.scatter_map(df_map, lat='LAT_CENTRO', lon='LONG_CENTRO', size='COUNT_RUT', color='NOMBRE_CENTRO', zoom=10, map_style='carto-darkmatter', hover_name='NOMBRE_CENTRO')
                             fig_map.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
-                            st.plotly_chart(fig_map, use_container_width=True, theme=None)
+                            st.plotly_chart(fig_map, width='stretch', theme=None)
                         except Exception as e: st.error(f"Error mapa: {e}")
                     else: st.warning("Sin datos geográficos válidos.")
             else: st.warning("No hay datos.")
@@ -1311,7 +1311,7 @@ else:
                                           title="Fuga de Capital por Sector", color_discrete_sequence=px.colors.sequential.Blues_r)
                     fig_sector.update_traces(textposition='outside', textinfo='percent+label', marker=dict(line=dict(color='#FFFFFF', width=2)))
                     fig_sector.update_layout(showlegend=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=20, r=20, b=20))
-                    st.plotly_chart(fig_sector, use_container_width=True, theme=None)
+                    st.plotly_chart(fig_sector, width='stretch', theme=None)
             
             with g_b:
                 t1, t2, t3 = st.tabs(["📝 Motivos Consulta", "👨‍⚕️ Profesionales", "💼 Profesiones"])
@@ -1326,7 +1326,7 @@ else:
                                           title="Top 10 Motivos de Consulta")
                         fig_mot.update_traces(marker_color='#0EA5E9', marker_line_width=0, textposition='outside')
                         fig_mot.update_layout(xaxis=dict(showgrid=False, visible=False), yaxis=dict(showgrid=False, title="", automargin=True), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=150, r=30, b=0))
-                        st.plotly_chart(fig_mot, use_container_width=True, theme=None)
+                        st.plotly_chart(fig_mot, width='stretch', theme=None)
                 with t2:
                     if 'NOMBRE_PROFESIONAL' in df_filtered.columns:
                         df_prof = df_unica.groupby('NOMBRE_PROFESIONAL')[rut_col].nunique().reset_index()
@@ -1336,7 +1336,7 @@ else:
                                           title="Top 10 Profesionales")
                         fig_prof.update_traces(marker_color='#F97316', marker_line_width=0, textposition='outside')
                         fig_prof.update_layout(xaxis=dict(showgrid=False, visible=False), yaxis=dict(showgrid=False, title="", automargin=True), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=150, r=30, b=0))
-                        st.plotly_chart(fig_prof, use_container_width=True, theme=None)
+                        st.plotly_chart(fig_prof, width='stretch', theme=None)
                 with t3:
                     if 'PROFESION' in df_filtered.columns:
                         df_profesion = df_unica.groupby('PROFESION')[rut_col].nunique().reset_index()
@@ -1346,7 +1346,7 @@ else:
                                           title="Top 10 Profesiones")
                         fig_profesion.update_traces(marker_color='#10B981', marker_line_width=0, textposition='outside')
                         fig_profesion.update_layout(xaxis=dict(showgrid=False, visible=False), yaxis=dict(showgrid=False, title="", automargin=True), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=150, r=30, b=0))
-                        st.plotly_chart(fig_profesion, use_container_width=True, theme=None)
+                        st.plotly_chart(fig_profesion, width='stretch', theme=None)
 
     with tab2:
         st.markdown("### 📈 Perfil Demográfico de la Brecha")
@@ -1359,7 +1359,7 @@ else:
                     fig_gen = px.pie(df_gen, values='Pacientes', names='Género', hole=0.6, title="Distribución por Género", color_discrete_sequence=['#0EA5E9', '#F97316', '#10B981', '#8B5CF6'])
                     fig_gen.update_traces(textposition='outside', textinfo='percent+label', marker=dict(line=dict(color='#FFFFFF', width=2)))
                     fig_gen.update_layout(showlegend=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=20, r=20, b=20))
-                    st.plotly_chart(fig_gen, use_container_width=True, theme=None)
+                    st.plotly_chart(fig_gen, width='stretch', theme=None)
             with d2:
                 if 'EDAD_ACTUAL' in df_filtered.columns:
                     df_edad = df_filtered.copy()
@@ -1373,7 +1373,7 @@ else:
                     fig_edad = px.bar(df_edad_grp, x='Pacientes', y='Grupo Etario', text='Pacientes', orientation='h', title="Distribución por Grupos de Edad")
                     fig_edad.update_traces(marker_color='#F97316', marker_line_width=0, textposition='outside')
                     fig_edad.update_layout(xaxis=dict(showgrid=False, visible=False), yaxis=dict(showgrid=False, title="", automargin=True), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=100, r=30, b=10))
-                    st.plotly_chart(fig_edad, use_container_width=True, theme=None)
+                    st.plotly_chart(fig_edad, width='stretch', theme=None)
                 
             if 'FECHA_AGENDADA' in df_filtered.columns:
                 df_time = df_filtered.dropna(subset=['FECHA_AGENDADA']).copy()
@@ -1390,7 +1390,7 @@ else:
                     fig_time = px.line(df_time_grp, x='MES', y='Fuga (CLP)', text='Fuga (CLP)', title="Evolución Mensual de Fuga de Capital")
                     fig_time.update_traces(mode='lines+markers+text', line=dict(color='#10B981', width=4), marker=dict(size=8, color='#FFFFFF', line=dict(color='#10B981', width=2)), texttemplate='CLP %{text:,.0f}', textposition='top center')
                     fig_time.update_layout(xaxis=dict(showgrid=False, title="", type='category', tickangle=-45, automargin=True), yaxis=dict(showgrid=False, visible=False), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=60, l=10, r=30, b=40))
-                    st.plotly_chart(fig_time, use_container_width=True, theme=None)
+                    st.plotly_chart(fig_time, width='stretch', theme=None)
                 
             st.info("🚨 **Nota de Gestión:** El perfil demográfico permite focalizar el medio de contacto. Pacientes menores de 40 años responden mejor a canales digitales o WhatsApp, mientras que pacientes sobre 60 años pueden requerir llamados telefónicos directos o gestiones presenciales.")
 
@@ -1453,7 +1453,7 @@ else:
                                    title="Estado de Horas")
                 fig_donut.update_traces(textposition='inside', textinfo='percent+label', marker=dict(line=dict(color='#FFFFFF', width=2)))
                 fig_donut.update_layout(showlegend=False, margin=dict(t=30, b=0, l=0, r=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
-                st.plotly_chart(fig_donut, use_container_width=True, theme=None)
+                st.plotly_chart(fig_donut, width='stretch', theme=None)
                 
             if filtro_tipo == "🔵 Rescate Retroactivo":
                 df_sorted = df_sorted[df_sorted['TIPO_RESCATE'] == "Rescate Retroactivo"]
@@ -1534,7 +1534,7 @@ else:
             file_name=f"NOMINA_ESTRATEGICA_{datetime.now().strftime('%Y%m%d')}.xlsx",
             mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             type='primary',
-            use_container_width=False
+            width='content'
         )
             
         configuracion_columnas = {
@@ -1554,7 +1554,7 @@ else:
         
         st.dataframe(
             df_sorted[cols_final_table],
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
             column_config=configuracion_columnas
         )
@@ -1680,7 +1680,7 @@ else:
                         st.markdown("</div>", unsafe_allow_html=True)
                     obs = st.text_area("Detalles Adicionales (Opcional)")
                     
-                    if st.form_submit_button("Confirmar Rescate/Gestión", type="primary", use_container_width=True):
+                    if st.form_submit_button("Confirmar Rescate/Gestión", type="primary", width='stretch'):
                         # ===== GUARDAR EN GOOGLE SHEETS ======
                         try:
                             url_rescates = st.secrets["URL_RESCATES"]
@@ -1827,29 +1827,33 @@ else:
                 if 'USUARIO_GESTOR' in df_rescates_raw.columns:
                     df_gestores = df_rescates_raw['USUARIO_GESTOR'].value_counts().reset_index()
                     df_gestores.columns = ['USUARIO_GESTOR', 'CANTIDAD']
-                    fig_gestores = px.bar(df_gestores, x='CANTIDAD', y='USUARIO_GESTOR', orientation='h', color='CANTIDAD', color_continuous_scale="Viridis", text='CANTIDAD')
-                    fig_gestores.update_layout(yaxis={'categoryorder':'total ascending'}, showlegend=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
-                    st.plotly_chart(fig_gestores, use_container_width=True)
+                    fig_gestores = px.bar(df_gestores, x='CANTIDAD', y='USUARIO_GESTOR', orientation='h', color='CANTIDAD', color_continuous_scale="Teal", text='CANTIDAD')
+                    fig_gestores.update_traces(textposition='auto', marker_line_color='rgb(8,48,107)', marker_line_width=1.5, opacity=0.8)
+                    fig_gestores.update_layout(yaxis={'categoryorder':'total ascending'}, showlegend=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(l=0, r=0, t=30, b=0))
+                    st.plotly_chart(fig_gestores, width="stretch")
             
             with col_b:
                 st.markdown("#### 🏥 Rescates por Centro")
                 if 'NOMBRE_CENTRO' in df_rescates_raw.columns:
                     df_centros = df_rescates_raw['NOMBRE_CENTRO'].value_counts().reset_index()
                     df_centros.columns = ['NOMBRE_CENTRO', 'CANTIDAD']
-                    fig_centros = px.pie(df_centros, names='NOMBRE_CENTRO', values='CANTIDAD', hole=0.4, color_discrete_sequence=px.colors.qualitative.Pastel)
-                    fig_centros.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
-                    st.plotly_chart(fig_centros, use_container_width=True)
+                    fig_centros = px.pie(df_centros, names='NOMBRE_CENTRO', values='CANTIDAD', hole=0.5, color_discrete_sequence=px.colors.qualitative.Pastel)
+                    fig_centros.update_traces(textposition='inside', textinfo='percent+label', pull=[0.05]*len(df_centros))
+                    fig_centros.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', showlegend=False, margin=dict(l=0, r=0, t=30, b=0))
+                    st.plotly_chart(fig_centros, width="stretch")
             
-            st.markdown("#### 📈 Evolución en el Tiempo")
+            st.markdown("#### 📈 Evolución Diaria de Rescates")
             if not df_rescates_raw['FECHA_RESCATE_DT'].isna().all():
-                df_tiempo = df_rescates_raw.groupby('MES_RESCATE').size().reset_index(name='CANTIDAD')
-                fig_tiempo = px.line(df_tiempo, x='MES_RESCATE', y='CANTIDAD', markers=True, text='CANTIDAD', line_shape='spline')
-                fig_tiempo.update_traces(textposition="top center", line_color='#00A8E8', marker=dict(size=10, color="#FFB703"))
-                fig_tiempo.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
-                st.plotly_chart(fig_tiempo, use_container_width=True)
+                df_rescates_raw['FECHA_DIA'] = df_rescates_raw['FECHA_RESCATE_DT'].dt.strftime('%Y-%m-%d')
+                df_tiempo = df_rescates_raw.groupby('FECHA_DIA').size().reset_index(name='CANTIDAD')
+                df_tiempo = df_tiempo.sort_values('FECHA_DIA')
+                fig_tiempo = px.area(df_tiempo, x='FECHA_DIA', y='CANTIDAD', markers=True, text='CANTIDAD')
+                fig_tiempo.update_traces(textposition="top center", line_color='#00A8E8', fillcolor='rgba(0, 168, 232, 0.2)', marker=dict(size=10, color="#FFB703", line=dict(width=2, color='white')))
+                fig_tiempo.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', xaxis_title="Fecha", yaxis_title="Rescates", margin=dict(l=0, r=0, t=30, b=0))
+                st.plotly_chart(fig_tiempo, width="stretch")
                 
             with st.expander("📄 Ver Datos de Rescates Exitosos (Crudos)"):
-                st.dataframe(df_rescates_raw, use_container_width=True)
+                st.dataframe(df_rescates_raw, width='stretch')
                 
         if not df_bajas_raw.empty:
             st.markdown("#### 🚫 Bajas y Pacientes No Inscritos")
@@ -1865,10 +1869,10 @@ else:
                     df_cats.columns = ['CATEGORIA', 'CANTIDAD']
                     fig_cats = px.pie(df_cats, names='CATEGORIA', values='CANTIDAD', hole=0.4)
                     fig_cats.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
-                    st.plotly_chart(fig_cats, use_container_width=True)
+                    st.plotly_chart(fig_cats, width='stretch')
                     
             with st.expander("📄 Ver Datos de Bajas (Crudos)"):
-                st.dataframe(df_bajas_raw, use_container_width=True)
+                st.dataframe(df_bajas_raw, width='stretch')
 
 # --- FOOTER (REPLICADO EXACTO DE APP BASE) ---
 st.markdown("---")

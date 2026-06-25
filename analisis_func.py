@@ -69,7 +69,7 @@ def export_to_excel(df,nombre,mes,año,rango):
         data=excel_buffer,
         file_name=f"{nombre}_{mes}_{año}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True
+        width='stretch'
     )
 
 def export_to_csv(df,nombre,año,rango):
@@ -85,7 +85,7 @@ def export_to_csv(df,nombre,año,rango):
         data=csv_buffer,
         file_name=f"{nombre}_{año}.csv",
         mime="text/csv",
-        use_container_width=True
+        width='stretch'
     )
 
 def export_to_csv_gen(df,nombre,año):
@@ -98,7 +98,7 @@ def export_to_csv_gen(df,nombre,año):
         data=csv_buffer,
         file_name=f"{nombre}_{año}.csv",
         mime="text/csv",
-        use_container_width=True
+        width='stretch'
     )
 
 def export_to_excel_gen(df,nombre,año):
@@ -111,7 +111,7 @@ def export_to_excel_gen(df,nombre,año):
         data=excel_buffer,
         file_name=f"{nombre}_{año}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True
+        width='stretch'
     )
 
 # ------------------ PROCESAMIENTO AGENDA (PRINCIPAL) ------------------
@@ -418,7 +418,7 @@ def reporte_percapita(archivos):
 
         # FECHAS CORTE
         if 'FECHA_CORTE' in df_per.columns:
-            df_per['FECHA_CORTE'] = pd.to_datetime(df_per['FECHA_CORTE'], errors="coerce")
+            df_per['FECHA_CORTE'] = pd.to_datetime(df_per['FECHA_CORTE'], errors="coerce", dayfirst=True)
             df_per['ANIO_CORTE'] = df_per['FECHA_CORTE'].dt.year
             MESES_ES = {1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'}
             df_per['MES_CORTE'] = df_per['FECHA_CORTE'].dt.month.map(MESES_ES)
