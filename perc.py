@@ -216,16 +216,13 @@ def get_demographic_data(url_demographic, url_rescates, client):
                             
                         es_captura_potencial = False
                         if 'OTRO CENTRO' in cat:
-                            if '[ACREDITA_DOMICILIO: SI]' in obs:
-                                es_captura_potencial = True
-                            else:
-                                match = re.search(r'\[VENCE_BLOQUEO:\s*(\d{4}-\d{2})\]', obs)
-                                if match:
-                                    vence_str = match.group(1) + "-01"
-                                    fecha_vence = pd.to_datetime(vence_str, errors='coerce')
-                                    fecha_eval = dem_data.get('fecha_corte_oficial', pd.to_datetime('today'))
-                                    if not pd.isna(fecha_vence) and fecha_eval >= fecha_vence:
-                                        es_captura_potencial = True
+                            match = re.search(r'\[VENCE_BLOQUEO:\s*(\d{4}-\d{2})\]', obs)
+                            if match:
+                                vence_str = match.group(1) + "-01"
+                                fecha_vence = pd.to_datetime(vence_str, errors='coerce')
+                                fecha_eval = dem_data.get('fecha_corte_oficial', pd.to_datetime('today'))
+                                if not pd.isna(fecha_vence) and fecha_eval >= fecha_vence:
+                                    es_captura_potencial = True
                                         
                         if es_captura_potencial:
                             capturas_potenciales.append(rut)
@@ -1200,7 +1197,7 @@ st.markdown("""
         <li><strong>Pendiente Inscripción:</strong> Pacientes nuevos que no aparecen en el padrón actual.</li>
         <li><strong>Alerta Recaptura (🚨):</strong> Pacientes que inscribiste/rescataste en el pasado, pero que de manera anómala <strong>volvieron a desaparecer</strong> en el padrón actual. Es crítico volver a contactarlos porque la inscripción debía durar 1 año.</li>
         <li><strong>Fuga Recurrente (🔄):</strong> Pacientes que habías dado de baja (Ej: "Rechaza inscripción"), pero que <strong>acumulan 3 o más atenciones en el año en curso</strong>. Aparecen para que intentes recapturarlos aprovechando su alta concurrencia.</li>
-        <li><strong>Captura Potencial (🟢):</strong> Pacientes inscritos en otro centro que ya cumplieron su bloqueo legal de 1 año (o justificaron domicilio) y que acumulan 3 o más atenciones. ¡Es el momento legal para capturarlos!</li>
+        <li><strong>Captura Potencial (🟢):</strong> Pacientes inscritos en otro centro que ya cumplieron su bloqueo legal de 1 año y que acumulan 3 o más atenciones. ¡Es el momento legal para capturarlos! <em>(Nota: Si su año aún no se cumple, recuérdeles traer un certificado de domicilio laboral o particular para romper el candado)</em>.</li>
     </ul>
     <p style="color: #555; font-size: 0.9rem; margin-top: 10px; margin-bottom: 0;"><em>👉 Puedes identificar qué tipo de problema tiene cada paciente mirando la columna <strong>"Estado (Fugas)"</strong> en la tabla de la pestaña "Nómina Estratégica".</em></p>
 </div>
@@ -1668,7 +1665,6 @@ else:
                     ])
                     
                     fecha_inscrip_otro = None
-                    acredita_domicilio = False
                     # Mostrar campos adicionales solo si el paciente cumple los requisitos cronologicos de recurrencia (>= 3 atenciones)
                     cant_aten = paciente_data.get('CANT_ATENCIONES', 1)
                     if categoria == "Inscrito en Otro Centro" and cant_aten >= 3:
@@ -1676,7 +1672,6 @@ else:
                         st.markdown("<strong style='color:#856404;'>ℹ️ Datos para Excepción de Bloqueo (1 Año)</strong>", unsafe_allow_html=True)
                         st.markdown(f"<p style='font-size:0.85rem; color:#666; margin-bottom: 5px;'>Este paciente tiene {cant_aten} atenciones y es candidato a Captura Potencial si su año venció.</p>", unsafe_allow_html=True)
                         fecha_inscrip_otro = st.date_input("Fecha aprox. de inscripción en su centro actual (Si la conoce)", value=None, min_value=datetime(2000, 1, 1))
-                        acredita_domicilio = st.checkbox("¿Acredita cambio de domicilio laboral o particular con documento?")
                         st.markdown("</div>", unsafe_allow_html=True)
                     obs = st.text_area("Detalles Adicionales (Opcional)")
                     
@@ -1714,9 +1709,7 @@ else:
                             else:
                                 obs_final = obs
                                 if categoria == "Inscrito en Otro Centro":
-                                    if acredita_domicilio:
-                                        obs_final = f"[ACREDITA_DOMICILIO: SI] {obs_final}"
-                                    elif fecha_inscrip_otro:
+                                    if fecha_inscrip_otro:
                                         vence_dt = fecha_inscrip_otro + pd.DateOffset(years=1)
                                         vence_str = vence_dt.strftime("%Y-%m")
                                         obs_final = f"[VENCE_BLOQUEO: {vence_str}] {obs_final}"
