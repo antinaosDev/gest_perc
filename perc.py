@@ -936,6 +936,7 @@ with st.sidebar:
                 n_cuenta = st.text_input("Nombre de Cuenta (CUENTA)")
                 n_clave = st.text_input("Contraseña Inicial (CLAVE_PLATAFORMA)")
                 n_rol = st.selectbox("Rol Asignado", ['ADMINISTRADOR', 'JEFE_UNIDAD', 'PROF_UNIDAD', 'PROGRAMADOR'])
+                n_estado = st.selectbox("Estado Inicial", ['ACTIVO', 'INACTIVA', 'MANTENCION'])
                 
                 if st.form_submit_button("Crear Usuario"):
                     if n_cuenta and n_clave:
@@ -955,6 +956,7 @@ with st.sidebar:
                             if "CUENTA" in headers: new_row[headers.index("CUENTA")] = n_cuenta
                             if "CLAVE_PLATAFORMA" in headers: new_row[headers.index("CLAVE_PLATAFORMA")] = n_clave
                             if "ROL" in headers: new_row[headers.index("ROL")] = n_rol
+                            if "ESTADO_APP" in headers: new_row[headers.index("ESTADO_APP")] = n_estado
                             
                             for i, h in enumerate(headers):
                                 if h == "PLATAFORMA":
@@ -1304,25 +1306,27 @@ anio_eval = dem_info.get('max_anio_percapita', 'N/A')
 mes_num = dem_info.get('max_mes_percapita', 0)
 mes_eval = MESES_ES.get(mes_num, 'N/A')
 
-with st.expander("ℹ️ Información Institucional y Guía de Uso de la Plataforma", expanded=False):
-    st.markdown(f"""
-    <div class="main-header" style="margin-bottom: 15px;">
-        <img src="{logo_url}" alt="Logo Institucional" style="width: 100px; height: auto; border-radius: 8px; background: white; padding: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <div class="header-text">
-            <h2 style="margin:0; padding:0; font-size: 1.5rem; color: #2C3E50;">Centro de Salud Familiar Cholchol</h2>
-            <p style="margin:0; color: #555;">Tablero de Control Percápita - Seguimiento y Rescate de Pacientes</p>
-        </div>
+st.markdown(f"""
+<div class="main-header" style="margin-bottom: 15px;">
+    <img src="{logo_url}" alt="Logo Institucional" style="width: 100px; height: auto; border-radius: 8px; background: white; padding: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    <div class="header-text">
+        <h2 style="margin:0; padding:0; font-size: 1.5rem; color: #2C3E50;">Centro de Salud Familiar Cholchol</h2>
+        <p style="margin:0; color: #555;">Tablero de Control Percápita - Seguimiento y Rescate de Pacientes</p>
     </div>
-    
-    <div style="background-color: #E8F4F8; border-left: 4px solid #00A8E8; padding: 10px 15px; margin-bottom: 20px; border-radius: 4px;">
-        <p style="margin: 0; color: #2C3E50; font-weight: bold;">
-            📅 Padrón Percápita Evaluado: {mes_eval} {anio_eval}
-        </p>
-        <p style="margin: 0; color: #555; font-size: 0.9em;">
-            El cálculo de brechas se realiza cruzando las atenciones contra los inscritos oficiales de este corte. (El sistema utiliza el último día del mes evaluado como límite cronológico).
-        </p>
-    </div>
-    
+</div>
+
+<div style="background-color: #E8F4F8; border-left: 4px solid #00A8E8; padding: 10px 15px; margin-bottom: 20px; border-radius: 4px;">
+    <p style="margin: 0; color: #2C3E50; font-weight: bold;">
+        📅 Padrón Percápita Evaluado: {mes_eval} {anio_eval}
+    </p>
+    <p style="margin: 0; color: #555; font-size: 0.9em;">
+        El cálculo de brechas se realiza cruzando las atenciones contra los inscritos oficiales de este corte. (El sistema utiliza el último día del mes evaluado como límite cronológico).
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
+with st.expander("ℹ️ Acerca de la Plataforma y Guía de Estados", expanded=False):
+    st.markdown("""
     <div class="info-card">
         <h4 style="margin-top:0; color: #2C3E50;">ℹ️ Acerca de esta Plataforma</h4>
         <p style="color: #555; font-size: 1rem; line-height: 1.5; margin-bottom: 0;">
