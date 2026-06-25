@@ -932,6 +932,24 @@ with st.sidebar:
 
     # ------------------ CREACIÓN DE USUARIOS ------------------
     if APP_CONFIG.get('rol_real') == 'PROGRAMADOR':
+        @st.cache_data(ttl=60, show_spinner=False)
+        def get_user_list():
+            try:
+                scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+                creds = Credentials.from_service_account_info(BOOTSTRAP_CREDS, scopes=scope)
+                client = gspread.authorize(creds)
+                ws = client.open_by_url(URL_ADMIN_MASTER).sheet1
+                data = ws.get_all_values()
+                if len(data) > 0:
+                    headers = [str(h).strip().upper() for h in data[0]]
+                    if "CUENTA" in headers:
+                        idx = headers.index("CUENTA")
+                        return [str(row[idx]).strip() for row in data[1:] if len(row)>idx and str(row[idx]).strip() != ""]
+            except: pass
+            return []
+            
+        lista_usuarios = get_user_list()
+        
         with st.expander("➕ Crear Nuevo Usuario"):
             with st.form("form_crear_usuario"):
                 n_cuenta = st.text_input("Nombre de Cuenta (CUENTA)")
@@ -980,24 +998,7 @@ with st.sidebar:
                             st.error(f"Error creando usuario: {e}")
                     else:
                         st.error("Debe ingresar Cuenta y Clave.")
-                        
-        @st.cache_data(ttl=60, show_spinner=False)
-        def get_user_list():
-            try:
-                scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-                creds = Credentials.from_service_account_info(BOOTSTRAP_CREDS, scopes=scope)
-                client = gspread.authorize(creds)
-                ws = client.open_by_url(URL_ADMIN_MASTER).sheet1
-                data = ws.get_all_values()
-                if len(data) > 0:
-                    headers = [str(h).strip().upper() for h in data[0]]
-                    if "CUENTA" in headers:
-                        idx = headers.index("CUENTA")
-                        return [str(row[idx]).strip() for row in data[1:] if len(row)>idx and str(row[idx]).strip() != ""]
-            except: pass
-            return []
-            
-        lista_usuarios = get_user_list()
+
         
         with st.expander("✏️ Editar Usuario"):
             st.info("Para editar, seleccione la Cuenta. Se actualizarán los demás campos ingresados.")
