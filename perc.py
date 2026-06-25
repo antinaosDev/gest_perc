@@ -1876,12 +1876,15 @@ else:
             
             st.markdown("#### 📈 Evolución Diaria de Rescates")
             if not df_rescates_raw['FECHA_RESCATE_DT'].isna().all():
-                df_rescates_raw['FECHA_DIA'] = df_rescates_raw['FECHA_RESCATE_DT'].dt.strftime('%Y-%m-%d')
+                df_rescates_raw['FECHA_DIA'] = df_rescates_raw['FECHA_RESCATE_DT'].dt.strftime('%d-%m-%Y')
                 df_tiempo = df_rescates_raw.groupby('FECHA_DIA').size().reset_index(name='CANTIDAD')
-                df_tiempo = df_tiempo.sort_values('FECHA_DIA')
+                # Convert back to datetime just for sorting chronologically, then back to string
+                df_tiempo['FECHA_SORT'] = pd.to_datetime(df_tiempo['FECHA_DIA'], format='%d-%m-%Y')
+                df_tiempo = df_tiempo.sort_values('FECHA_SORT')
+                
                 fig_tiempo = px.area(df_tiempo, x='FECHA_DIA', y='CANTIDAD', markers=True, text='CANTIDAD')
                 fig_tiempo.update_traces(textposition="top center", line_color='#00A8E8', fillcolor='rgba(0, 168, 232, 0.2)', marker=dict(size=10, color="#FFB703", line=dict(width=2, color='white')))
-                fig_tiempo.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', xaxis_title="Fecha", yaxis_title="Rescates", margin=dict(l=0, r=0, t=30, b=0))
+                fig_tiempo.update_layout(xaxis_type='category', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', xaxis_title="Fecha", yaxis_title="Rescates", margin=dict(l=0, r=0, t=30, b=0))
                 st.plotly_chart(fig_tiempo, width="stretch")
                 
             with st.expander("📄 Ver Datos de Rescates Exitosos (Crudos)"):
