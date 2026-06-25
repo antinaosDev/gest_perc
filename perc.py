@@ -1365,6 +1365,34 @@ else:
         </div>""", unsafe_allow_html=True)
 
     st.markdown("---")
+    
+    with st.expander("👀 Ver Listado Rápido de Estados Críticos"):
+        st.markdown("<p style='font-size:0.9rem; color:#555;'>Resumen rápido de pacientes únicos en cada categoría especial para facilitar su identificación inmediata.</p>", unsafe_allow_html=True)
+        estados_criticos = {
+            'FUGA RECURRENTE': '🔄 Fugas Recurrentes',
+            'ALERTA RECAPTURA': '🚨 Alertas de Recaptura',
+            'CAPTURA POTENCIAL': '🟢 Capturas Potenciales',
+            'RECHAZO PREVISIONAL': '⚠️ Rechazos Previsionales'
+        }
+        
+        hay_datos = False
+        for estado_db, label in estados_criticos.items():
+            if 'ESTADO_PERCAPITA' in df_filtered.columns:
+                df_st = df_filtered[df_filtered['ESTADO_PERCAPITA'] == estado_db]
+                rut_c = 'RUT_CLEAN' if 'RUT_CLEAN' in df_st.columns else 'RUT'
+                if not df_st.empty:
+                    hay_datos = True
+                    df_st_unique = df_st.drop_duplicates(subset=[rut_c])
+                    st.markdown(f"**{label} ({len(df_st_unique)} pacientes):**")
+                    for _, row in df_st_unique.iterrows():
+                        nombre = row.get('NOMBRE_PACIENTE', 'Sin Nombre')
+                        st.markdown(f"- `{row['RUT']}` - {nombre}")
+                    st.markdown("")
+        
+        if not hay_datos:
+            st.info("No hay pacientes en estos estados críticos según los filtros actuales.")
+
+    st.markdown("---")
 
     # TABS PARA ORGANIZAR LA APP
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Análisis de Brechas", "📈 Dashboard Demográfico", "📋 Nómina de Pacientes (Fugas y Alertas)", "📝 Gestión de Rescates", "🏆 Métricas de Rescates"])
