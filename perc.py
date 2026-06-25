@@ -1395,653 +1395,682 @@ else:
     st.markdown("---")
 
     # TABS PARA ORGANIZAR LA APP
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "📊 Análisis de Brechas", 
-        "📈 Dashboard Demográfico", 
-        "📋 Nómina de Pacientes", 
-        "📝 Gestión de Rescates", 
-        "🏆 Métricas de Rescates",
-        "📚 Manual Operativo FONASA"
-    ])
+    rol_actual = APP_CONFIG.get('rol', 'SIN_ROL')
+    
+    show_tab1 = rol_actual in ["PROGRAMADOR", "ADMINISTRADOR"]
+    show_tab2 = rol_actual in ["PROGRAMADOR", "ADMINISTRADOR", "JEFE_UNIDAD"]
+    show_tab3 = rol_actual in ["PROGRAMADOR", "ADMINISTRADOR", "JEFE_UNIDAD"]
+    show_tab4 = rol_actual in ["PROGRAMADOR", "ADMINISTRADOR", "JEFE_UNIDAD", "PROF_UNIDAD"]
+    show_tab5 = rol_actual in ["PROGRAMADOR", "ADMINISTRADOR", "JEFE_UNIDAD"]
+    show_tab6 = rol_actual in ["PROGRAMADOR", "ADMINISTRADOR", "JEFE_UNIDAD", "PROF_UNIDAD"]
+    
+    tabs_titles = []
+    if show_tab1: tabs_titles.append("📊 Análisis de Brechas")
+    if show_tab2: tabs_titles.append("📈 Dashboard Demográfico")
+    if show_tab3: tabs_titles.append("📋 Nómina de Pacientes")
+    if show_tab4: tabs_titles.append("📝 Gestión de Rescates")
+    if show_tab5: tabs_titles.append("🏆 Métricas de Rescates")
+    if show_tab6: tabs_titles.append("📚 Manual Operativo FONASA")
 
-    with tab1:
-        st.markdown("### 📊 Análisis Estratégico y Financiero")
-        if not df_filtered.empty:
-            rut_col = 'RUT_CLEAN' if 'RUT_CLEAN' in df_filtered.columns else 'RUT'
-            total_brechas = df_filtered[rut_col].nunique()
-            valor_percapita = 16872
-            impacto_total = total_brechas * valor_percapita
-            
-            sector_max = df_filtered['SECTOR'].value_counts().index[0] if 'SECTOR' in df_filtered.columns and not df_filtered['SECTOR'].empty else "N/A"
-            pct_sector = (df_filtered['SECTOR'].value_counts().iloc[0] / len(df_filtered) * 100) if sector_max != "N/A" else 0
-            
-            st.info(f"**💡 Storytelling Analítico:** El sistema detecta **{total_brechas} pacientes únicos** sin registro percapita al año y mes evaluado. Esta población representa una fuga de capital proyectada de **CLP {impacto_total:,.0f} anuales** (basado en el per cápita basal de CLP 16.872). El **{pct_sector:.1f}%** de esta fuga de capital se concentra en el sector **{sector_max}**.")
-            
-            g_a, g_b = st.columns(2)
-            with g_a:
-                if 'SECTOR' in df_filtered.columns:
-                    df_fin = df_filtered.copy()
-                    df_fin['SECTOR'] = df_fin['SECTOR'].replace({'Sin Sector': 'Sin Información', 'NO_ESPECIFICADO': 'Sin Información', 'No Especificado': 'Sin Información'})
-                    df_fin = df_fin.groupby('SECTOR')[rut_col].nunique().reset_index()
-                    df_fin.rename(columns={rut_col: 'RUT'}, inplace=True)
-                    df_fin['Fuga de Capital (CLP)'] = df_fin['RUT'] * valor_percapita
-                    fig_sector = px.pie(df_fin, values='Fuga de Capital (CLP)', names='SECTOR', hole=0.6,
-                                          title="Fuga de Capital por Sector", color_discrete_sequence=px.colors.sequential.Blues_r)
-                    fig_sector.update_traces(textposition='outside', textinfo='percent+label', marker=dict(line=dict(color='#FFFFFF', width=2)))
-                    fig_sector.update_layout(showlegend=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=20, r=20, b=20))
-                    st.plotly_chart(fig_sector, width='stretch', theme=None)
-            
-            with g_b:
-                t1, t2, t3 = st.tabs(["📝 Motivos Consulta", "👨‍⚕️ Profesionales", "💼 Profesiones"])
+    if not tabs_titles:
+        tabs_titles = ["📝 Gestión de Rescates"]
+        show_tab4 = True
+
+    tabs_creados = st.tabs(tabs_titles)
+    
+    import contextlib
+    tabs_iter = iter(tabs_creados)
+    tab1 = next(tabs_iter) if show_tab1 else contextlib.nullcontext()
+    tab2 = next(tabs_iter) if show_tab2 else contextlib.nullcontext()
+    tab3 = next(tabs_iter) if show_tab3 else contextlib.nullcontext()
+    tab4 = next(tabs_iter) if show_tab4 else contextlib.nullcontext()
+    tab5 = next(tabs_iter) if show_tab5 else contextlib.nullcontext()
+    tab6 = next(tabs_iter) if show_tab6 else contextlib.nullcontext()
+
+    if show_tab1:
+        with tab1:
+            st.markdown("### 📊 Análisis Estratégico y Financiero")
+            if not df_filtered.empty:
                 rut_col = 'RUT_CLEAN' if 'RUT_CLEAN' in df_filtered.columns else 'RUT'
-                df_unica = df_filtered.drop_duplicates(subset=[rut_col], keep='last').copy()
-                with t1:
-                    if 'MOTIVO_CONSULTA' in df_unica.columns:
-                        df_mot = df_unica.groupby('MOTIVO_CONSULTA')[rut_col].nunique().reset_index()
-                        df_mot.rename(columns={rut_col: 'RUT'}, inplace=True)
-                        df_mot = df_mot.sort_values('RUT', ascending=False).head(10).sort_values('RUT', ascending=True)
-                        fig_mot = px.bar(df_mot, x='RUT', y='MOTIVO_CONSULTA', text='RUT', orientation='h',
-                                          title="Top 10 Motivos de Consulta")
-                        fig_mot.update_traces(marker_color='#0EA5E9', marker_line_width=0, textposition='outside')
-                        fig_mot.update_layout(xaxis=dict(showgrid=False, visible=False), yaxis=dict(showgrid=False, title="", automargin=True), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=150, r=30, b=0))
-                        st.plotly_chart(fig_mot, width='stretch', theme=None)
-                with t2:
-                    if 'NOMBRE_PROFESIONAL' in df_filtered.columns:
-                        df_prof = df_unica.groupby('NOMBRE_PROFESIONAL')[rut_col].nunique().reset_index()
-                        df_prof.rename(columns={rut_col: 'RUT'}, inplace=True)
-                        df_prof = df_prof.sort_values('RUT', ascending=False).head(10).sort_values('RUT', ascending=True)
-                        fig_prof = px.bar(df_prof, x='RUT', y='NOMBRE_PROFESIONAL', text='RUT', orientation='h',
-                                          title="Top 10 Profesionales")
-                        fig_prof.update_traces(marker_color='#F97316', marker_line_width=0, textposition='outside')
-                        fig_prof.update_layout(xaxis=dict(showgrid=False, visible=False), yaxis=dict(showgrid=False, title="", automargin=True), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=150, r=30, b=0))
-                        st.plotly_chart(fig_prof, width='stretch', theme=None)
-                with t3:
-                    if 'PROFESION' in df_filtered.columns:
-                        df_profesion = df_unica.groupby('PROFESION')[rut_col].nunique().reset_index()
-                        df_profesion.rename(columns={rut_col: 'RUT'}, inplace=True)
-                        df_profesion = df_profesion.sort_values('RUT', ascending=False).head(10).sort_values('RUT', ascending=True)
-                        fig_profesion = px.bar(df_profesion, x='RUT', y='PROFESION', text='RUT', orientation='h',
-                                          title="Top 10 Profesiones")
-                        fig_profesion.update_traces(marker_color='#10B981', marker_line_width=0, textposition='outside')
-                        fig_profesion.update_layout(xaxis=dict(showgrid=False, visible=False), yaxis=dict(showgrid=False, title="", automargin=True), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=150, r=30, b=0))
-                        st.plotly_chart(fig_profesion, width='stretch', theme=None)
+                total_brechas = df_filtered[rut_col].nunique()
+                valor_percapita = 16872
+                impacto_total = total_brechas * valor_percapita
+            
+                sector_max = df_filtered['SECTOR'].value_counts().index[0] if 'SECTOR' in df_filtered.columns and not df_filtered['SECTOR'].empty else "N/A"
+                pct_sector = (df_filtered['SECTOR'].value_counts().iloc[0] / len(df_filtered) * 100) if sector_max != "N/A" else 0
+            
+                st.info(f"**💡 Storytelling Analítico:** El sistema detecta **{total_brechas} pacientes únicos** sin registro percapita al año y mes evaluado. Esta población representa una fuga de capital proyectada de **CLP {impacto_total:,.0f} anuales** (basado en el per cápita basal de CLP 16.872). El **{pct_sector:.1f}%** de esta fuga de capital se concentra en el sector **{sector_max}**.")
+            
+                g_a, g_b = st.columns(2)
+                with g_a:
+                    if 'SECTOR' in df_filtered.columns:
+                        df_fin = df_filtered.copy()
+                        df_fin['SECTOR'] = df_fin['SECTOR'].replace({'Sin Sector': 'Sin Información', 'NO_ESPECIFICADO': 'Sin Información', 'No Especificado': 'Sin Información'})
+                        df_fin = df_fin.groupby('SECTOR')[rut_col].nunique().reset_index()
+                        df_fin.rename(columns={rut_col: 'RUT'}, inplace=True)
+                        df_fin['Fuga de Capital (CLP)'] = df_fin['RUT'] * valor_percapita
+                        fig_sector = px.pie(df_fin, values='Fuga de Capital (CLP)', names='SECTOR', hole=0.6,
+                                              title="Fuga de Capital por Sector", color_discrete_sequence=px.colors.sequential.Blues_r)
+                        fig_sector.update_traces(textposition='outside', textinfo='percent+label', marker=dict(line=dict(color='#FFFFFF', width=2)))
+                        fig_sector.update_layout(showlegend=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=20, r=20, b=20))
+                        st.plotly_chart(fig_sector, width='stretch', theme=None)
+            
+                with g_b:
+                    t1, t2, t3 = st.tabs(["📝 Motivos Consulta", "👨‍⚕️ Profesionales", "💼 Profesiones"])
+                    rut_col = 'RUT_CLEAN' if 'RUT_CLEAN' in df_filtered.columns else 'RUT'
+                    df_unica = df_filtered.drop_duplicates(subset=[rut_col], keep='last').copy()
+                    with t1:
+                        if 'MOTIVO_CONSULTA' in df_unica.columns:
+                            df_mot = df_unica.groupby('MOTIVO_CONSULTA')[rut_col].nunique().reset_index()
+                            df_mot.rename(columns={rut_col: 'RUT'}, inplace=True)
+                            df_mot = df_mot.sort_values('RUT', ascending=False).head(10).sort_values('RUT', ascending=True)
+                            fig_mot = px.bar(df_mot, x='RUT', y='MOTIVO_CONSULTA', text='RUT', orientation='h',
+                                              title="Top 10 Motivos de Consulta")
+                            fig_mot.update_traces(marker_color='#0EA5E9', marker_line_width=0, textposition='outside')
+                            fig_mot.update_layout(xaxis=dict(showgrid=False, visible=False), yaxis=dict(showgrid=False, title="", automargin=True), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=150, r=30, b=0))
+                            st.plotly_chart(fig_mot, width='stretch', theme=None)
+                    with t2:
+                        if 'NOMBRE_PROFESIONAL' in df_filtered.columns:
+                            df_prof = df_unica.groupby('NOMBRE_PROFESIONAL')[rut_col].nunique().reset_index()
+                            df_prof.rename(columns={rut_col: 'RUT'}, inplace=True)
+                            df_prof = df_prof.sort_values('RUT', ascending=False).head(10).sort_values('RUT', ascending=True)
+                            fig_prof = px.bar(df_prof, x='RUT', y='NOMBRE_PROFESIONAL', text='RUT', orientation='h',
+                                              title="Top 10 Profesionales")
+                            fig_prof.update_traces(marker_color='#F97316', marker_line_width=0, textposition='outside')
+                            fig_prof.update_layout(xaxis=dict(showgrid=False, visible=False), yaxis=dict(showgrid=False, title="", automargin=True), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=150, r=30, b=0))
+                            st.plotly_chart(fig_prof, width='stretch', theme=None)
+                    with t3:
+                        if 'PROFESION' in df_filtered.columns:
+                            df_profesion = df_unica.groupby('PROFESION')[rut_col].nunique().reset_index()
+                            df_profesion.rename(columns={rut_col: 'RUT'}, inplace=True)
+                            df_profesion = df_profesion.sort_values('RUT', ascending=False).head(10).sort_values('RUT', ascending=True)
+                            fig_profesion = px.bar(df_profesion, x='RUT', y='PROFESION', text='RUT', orientation='h',
+                                              title="Top 10 Profesiones")
+                            fig_profesion.update_traces(marker_color='#10B981', marker_line_width=0, textposition='outside')
+                            fig_profesion.update_layout(xaxis=dict(showgrid=False, visible=False), yaxis=dict(showgrid=False, title="", automargin=True), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=150, r=30, b=0))
+                            st.plotly_chart(fig_profesion, width='stretch', theme=None)
 
-    with tab2:
-        st.markdown("### 📈 Perfil Demográfico de la Brecha")
-        if not df_filtered.empty:
-            d1, d2 = st.columns(2)
-            with d1:
-                if 'GENERO' in df_filtered.columns:
-                    df_gen = df_filtered['GENERO'].value_counts().reset_index()
-                    df_gen.columns = ['Género', 'Pacientes']
-                    fig_gen = px.pie(df_gen, values='Pacientes', names='Género', hole=0.6, title="Distribución por Género", color_discrete_sequence=['#0EA5E9', '#F97316', '#10B981', '#8B5CF6'])
-                    fig_gen.update_traces(textposition='outside', textinfo='percent+label', marker=dict(line=dict(color='#FFFFFF', width=2)))
-                    fig_gen.update_layout(showlegend=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=20, r=20, b=20))
-                    st.plotly_chart(fig_gen, width='stretch', theme=None)
-            with d2:
-                if 'EDAD_ACTUAL' in df_filtered.columns:
-                    df_edad = df_filtered.copy()
-                    df_edad['EDAD_NUM'] = pd.to_numeric(df_edad['EDAD_ACTUAL'], errors='coerce')
-                    bins = [-1, 18, 40, 60, 150]
-                    labels = ['0-18 años', '19-40 años', '41-60 años', 'Mayor a 60']
-                    df_edad['Grupo Etario'] = pd.cut(df_edad['EDAD_NUM'], bins=bins, labels=labels, right=True)
-                    rut_col = 'RUT_CLEAN' if 'RUT_CLEAN' in df_edad.columns else 'RUT'
-                    df_edad_grp = df_edad.groupby('Grupo Etario', observed=False)[rut_col].nunique().reset_index()
-                    df_edad_grp.columns = ['Grupo Etario', 'Pacientes']
-                    fig_edad = px.bar(df_edad_grp, x='Pacientes', y='Grupo Etario', text='Pacientes', orientation='h', title="Distribución por Grupos de Edad")
-                    fig_edad.update_traces(marker_color='#F97316', marker_line_width=0, textposition='outside')
-                    fig_edad.update_layout(xaxis=dict(showgrid=False, visible=False), yaxis=dict(showgrid=False, title="", automargin=True), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=100, r=30, b=10))
-                    st.plotly_chart(fig_edad, width='stretch', theme=None)
+    if show_tab2:
+        with tab2:
+            st.markdown("### 📈 Perfil Demográfico de la Brecha")
+            if not df_filtered.empty:
+                d1, d2 = st.columns(2)
+                with d1:
+                    if 'GENERO' in df_filtered.columns:
+                        df_gen = df_filtered['GENERO'].value_counts().reset_index()
+                        df_gen.columns = ['Género', 'Pacientes']
+                        fig_gen = px.pie(df_gen, values='Pacientes', names='Género', hole=0.6, title="Distribución por Género", color_discrete_sequence=['#0EA5E9', '#F97316', '#10B981', '#8B5CF6'])
+                        fig_gen.update_traces(textposition='outside', textinfo='percent+label', marker=dict(line=dict(color='#FFFFFF', width=2)))
+                        fig_gen.update_layout(showlegend=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=20, r=20, b=20))
+                        st.plotly_chart(fig_gen, width='stretch', theme=None)
+                with d2:
+                    if 'EDAD_ACTUAL' in df_filtered.columns:
+                        df_edad = df_filtered.copy()
+                        df_edad['EDAD_NUM'] = pd.to_numeric(df_edad['EDAD_ACTUAL'], errors='coerce')
+                        bins = [-1, 18, 40, 60, 150]
+                        labels = ['0-18 años', '19-40 años', '41-60 años', 'Mayor a 60']
+                        df_edad['Grupo Etario'] = pd.cut(df_edad['EDAD_NUM'], bins=bins, labels=labels, right=True)
+                        rut_col = 'RUT_CLEAN' if 'RUT_CLEAN' in df_edad.columns else 'RUT'
+                        df_edad_grp = df_edad.groupby('Grupo Etario', observed=False)[rut_col].nunique().reset_index()
+                        df_edad_grp.columns = ['Grupo Etario', 'Pacientes']
+                        fig_edad = px.bar(df_edad_grp, x='Pacientes', y='Grupo Etario', text='Pacientes', orientation='h', title="Distribución por Grupos de Edad")
+                        fig_edad.update_traces(marker_color='#F97316', marker_line_width=0, textposition='outside')
+                        fig_edad.update_layout(xaxis=dict(showgrid=False, visible=False), yaxis=dict(showgrid=False, title="", automargin=True), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=40, l=100, r=30, b=10))
+                        st.plotly_chart(fig_edad, width='stretch', theme=None)
                 
-            if 'FECHA_AGENDADA' in df_filtered.columns:
-                df_time = df_filtered.dropna(subset=['FECHA_AGENDADA']).copy()
-                df_time['FECHA'] = pd.to_datetime(df_time['FECHA_AGENDADA'].astype(str).str.split(' ').str[0], format='%d/%m/%Y', errors='coerce')
-                df_time = df_time.dropna(subset=['FECHA'])
-                if not df_time.empty:
-                    df_time['MES'] = df_time['FECHA'].dt.strftime('%Y-%m')
-                    rut_col_time = 'RUT_CLEAN' if 'RUT_CLEAN' in df_time.columns else 'RUT'
-                    df_time_grp = df_time.groupby('MES')[rut_col_time].nunique().reset_index()
-                    df_time_grp.rename(columns={rut_col_time: 'RUT'}, inplace=True)
-                    df_time_grp['Fuga (CLP)'] = df_time_grp['RUT'] * 16872
-                    df_time_grp = df_time_grp.sort_values('MES')
+                if 'FECHA_AGENDADA' in df_filtered.columns:
+                    df_time = df_filtered.dropna(subset=['FECHA_AGENDADA']).copy()
+                    df_time['FECHA'] = pd.to_datetime(df_time['FECHA_AGENDADA'].astype(str).str.split(' ').str[0], format='%d/%m/%Y', errors='coerce')
+                    df_time = df_time.dropna(subset=['FECHA'])
+                    if not df_time.empty:
+                        df_time['MES'] = df_time['FECHA'].dt.strftime('%Y-%m')
+                        rut_col_time = 'RUT_CLEAN' if 'RUT_CLEAN' in df_time.columns else 'RUT'
+                        df_time_grp = df_time.groupby('MES')[rut_col_time].nunique().reset_index()
+                        df_time_grp.rename(columns={rut_col_time: 'RUT'}, inplace=True)
+                        df_time_grp['Fuga (CLP)'] = df_time_grp['RUT'] * 16872
+                        df_time_grp = df_time_grp.sort_values('MES')
                     
-                    fig_time = px.line(df_time_grp, x='MES', y='Fuga (CLP)', text='Fuga (CLP)', title="Evolución Mensual de Fuga de Capital")
-                    fig_time.update_traces(mode='lines+markers+text', line=dict(color='#10B981', width=4), marker=dict(size=8, color='#FFFFFF', line=dict(color='#10B981', width=2)), texttemplate='CLP %{text:,.0f}', textposition='top center')
-                    fig_time.update_layout(xaxis=dict(showgrid=False, title="", type='category', tickangle=-45, automargin=True), yaxis=dict(showgrid=False, visible=False), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=60, l=10, r=30, b=40))
-                    st.plotly_chart(fig_time, width='stretch', theme=None)
+                        fig_time = px.line(df_time_grp, x='MES', y='Fuga (CLP)', text='Fuga (CLP)', title="Evolución Mensual de Fuga de Capital")
+                        fig_time.update_traces(mode='lines+markers+text', line=dict(color='#10B981', width=4), marker=dict(size=8, color='#FFFFFF', line=dict(color='#10B981', width=2)), texttemplate='CLP %{text:,.0f}', textposition='top center')
+                        fig_time.update_layout(xaxis=dict(showgrid=False, title="", type='category', tickangle=-45, automargin=True), yaxis=dict(showgrid=False, visible=False), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(t=60, l=10, r=30, b=40))
+                        st.plotly_chart(fig_time, width='stretch', theme=None)
                 
-            st.info("🚨 **Nota de Gestión:** El perfil demográfico permite focalizar el medio de contacto. Pacientes menores de 40 años responden mejor a canales digitales o WhatsApp, mientras que pacientes sobre 60 años pueden requerir llamados telefónicos directos o gestiones presenciales.")
+                st.info("🚨 **Nota de Gestión:** El perfil demográfico permite focalizar el medio de contacto. Pacientes menores de 40 años responden mejor a canales digitales o WhatsApp, mientras que pacientes sobre 60 años pueden requerir llamados telefónicos directos o gestiones presenciales.")
 
-    with tab3:
-        st.markdown("### 📋 Nómina Estratégica para Gestión")
+    if show_tab3:
+        with tab3:
+            st.markdown("### 📋 Nómina Estratégica para Gestión")
         
-        # Análisis Estadístico de la Nómina
-        if not df_filtered.empty:
-            st.markdown("#### 📈 Resumen Estadístico de la Nómina")
+            # Análisis Estadístico de la Nómina
+            if not df_filtered.empty:
+                st.markdown("#### 📈 Resumen Estadístico de la Nómina")
             
-            # Clasificación Cronológica (Chile)
-            import pytz
-            from datetime import datetime
-            chile_tz = pytz.timezone('America/Santiago')
-            ahora_chile = datetime.now(chile_tz).replace(tzinfo=None)
-            
-            df_sorted = df_filtered.copy()
-            
-            if 'FECHA_AGENDADA' in df_sorted.columns:
-                fecha_base = df_sorted['FECHA_AGENDADA'].astype(str).str.split(' ').str[0].replace({'nan': '', 'None': ''})
-                
-                if 'HORA_AGENDADA' in df_sorted.columns:
-                    hora_base = df_sorted['HORA_AGENDADA'].astype(str).replace({'nan': '00:00', 'None': '00:00', '': '00:00'})
-                    df_sorted['FECHA_HORA_STR'] = fecha_base + ' ' + hora_base
-                    df_sorted['FECHA_HORA'] = pd.to_datetime(df_sorted['FECHA_HORA_STR'], format='mixed', dayfirst=True, errors='coerce')
-                else:
-                    df_sorted['FECHA_HORA'] = pd.to_datetime(fecha_base, errors='coerce', dayfirst=True)
-                    
-                # Fallback: si por culpa de la hora da NaT, intentar solo con la fecha
-                idx_nat = df_sorted['FECHA_HORA'].isna() & (fecha_base != '')
-                if idx_nat.any():
-                    df_sorted.loc[idx_nat, 'FECHA_HORA'] = pd.to_datetime(fecha_base[idx_nat], errors='coerce', dayfirst=True)
-                
-                df_sorted = df_sorted.sort_values(by='FECHA_HORA', ascending=True)
-                
-                def categorize_rescue(dt):
-                    if pd.isna(dt):
-                        return "Sin Fecha"
-                    if dt < ahora_chile:
-                        return "Rescate Retroactivo"
-                    else:
-                        return "Por Rescatar"
-                        
-                df_sorted['TIPO_RESCATE'] = df_sorted['FECHA_HORA'].apply(categorize_rescue)
-            else:
-                df_sorted['TIPO_RESCATE'] = "Por Rescatar"
-            
-            c_met, c_chart = st.columns([1.2, 1])
-            with c_met:
-                st.markdown("<br>", unsafe_allow_html=True)
-                filtro_tipo = st.radio("Filtro de Gestión (Cronológico):", ["🟢 Mostrar Todo", "🔵 Rescate Retroactivo", "🟡 Por Rescatar"], horizontal=False)
-                if "Sin Fecha" in df_sorted['TIPO_RESCATE'].values:
-                    st.info("💡 **Sin Fecha:** Atenciones que el sistema no tiene registradas con hora agendada (Ej. demanda espontánea).")
-            
-            with c_chart:
-                df_pie = df_sorted['TIPO_RESCATE'].value_counts().reset_index()
-                df_pie.columns = ['Tipo', 'Cantidad']
-                fig_donut = px.pie(df_pie, values='Cantidad', names='Tipo', hole=0.5, 
-                                   color='Tipo', color_discrete_map={'Rescate Retroactivo': '#0A6E8D', 'Por Rescatar': '#FB8500', 'Sin Fecha': '#6B7A90'},
-                                   title="Estado de Horas")
-                fig_donut.update_traces(textposition='inside', textinfo='percent+label', marker=dict(line=dict(color='#FFFFFF', width=2)))
-                fig_donut.update_layout(showlegend=False, margin=dict(t=30, b=0, l=0, r=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
-                st.plotly_chart(fig_donut, width='stretch', theme=None)
-                
-            if filtro_tipo == "🔵 Rescate Retroactivo":
-                df_sorted = df_sorted[df_sorted['TIPO_RESCATE'] == "Rescate Retroactivo"]
-            elif filtro_tipo == "🟡 Por Rescatar":
-                df_sorted = df_sorted[df_sorted['TIPO_RESCATE'] == "Por Rescatar"]
-            
-        cols_final_table = [c for c in df_sorted.columns if c not in ['EDAD_NUM_CHART', 'FECHA_HORA', 'FECHA_HORA_STR', 'RUT_CLEAN', 'LABEL_SELECT']]
-        if 'TIPO_RESCATE' in cols_final_table:
-            cols_final_table.insert(0, cols_final_table.pop(cols_final_table.index('TIPO_RESCATE')))
-        if 'ESTADO_PERCAPITA' in cols_final_table:
-            cols_final_table.insert(1, cols_final_table.pop(cols_final_table.index('ESTADO_PERCAPITA')))
-
-        import io
-        excel_buffer = io.BytesIO()
-        with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
-            df_export = df_sorted[cols_final_table].copy()
-            
-            conteo_atenciones = df_export.groupby('RUT').size().reset_index(name='CANT_ATENCIONES')
-            df_export = df_export.merge(conteo_atenciones, on='RUT', how='left')
-            
-            cols_export = list(df_export.columns)
-            cols_export.insert(2, cols_export.pop(cols_export.index('CANT_ATENCIONES')))
-            df_export = df_export[cols_export]
-            
-            df_export.to_excel(writer, index=False, sheet_name='Nómina_Completa')
-            
-            if 'FECHA_HORA' in df_sorted.columns:
-                df_contacto = df_sorted.sort_values('FECHA_HORA', ascending=False).drop_duplicates(subset=['RUT'], keep='first').copy()
-            else:
-                df_contacto = df_sorted.drop_duplicates(subset=['RUT'], keep='first').copy()
-                
-            cols_contacto = [c for c in ['RUT', 'NOMBRE_PACIENTE', 'TELEFONO', 'SECTOR', 'EDAD_ACTUAL', 'FECHA_AGENDADA', 'HORA_AGENDADA', 'NOMBRE_PROFESIONAL', 'MOTIVO_CONSULTA'] if c in df_contacto.columns]
-            df_contacto = df_contacto[cols_contacto]
-            df_contacto = df_contacto.merge(conteo_atenciones, on='RUT', how='left')
-            df_contacto.rename(columns={'FECHA_AGENDADA': 'ULTIMA_FECHA_AGENDADA', 'HORA_AGENDADA': 'ULTIMA_HORA_AGENDADA'}, inplace=True)
-            df_contacto.to_excel(writer, index=False, sheet_name='Contactabilidad_Únicos')
-            
-            if 'SECTOR' in df_contacto.columns:
-                df_sec = df_contacto.groupby('SECTOR')['RUT'].nunique().reset_index(name='Total_Pacientes_Unicos')
-                df_sec['Fuga_Estimada_CLP'] = df_sec['Total_Pacientes_Unicos'] * 16872
-                df_sec = df_sec.sort_values('Total_Pacientes_Unicos', ascending=False)
-                df_sec.to_excel(writer, index=False, sheet_name='Resumen_Sectores')
-                
-            if 'NOMBRE_PROFESIONAL' in df_contacto.columns:
-                df_prof = df_contacto.groupby('NOMBRE_PROFESIONAL')['RUT'].nunique().reset_index(name='Total_Pacientes_Unicos')
-                df_prof['Fuga_Estimada_CLP'] = df_prof['Total_Pacientes_Unicos'] * 16872
-                df_prof = df_prof.sort_values('Total_Pacientes_Unicos', ascending=False)
-                df_prof.to_excel(writer, index=False, sheet_name='Resumen_Profesionales')
-
-            workbook = writer.book
-            header_format = workbook.add_format({
-                'bold': True, 'font_color': 'white', 'bg_color': '#00A8E8', 'border': 1
-            })
-            
-            for sheet_name in writer.sheets:
-                worksheet = writer.sheets[sheet_name]
-                if sheet_name == 'Nómina_Completa':
-                    df_sheet = df_export
-                elif sheet_name == 'Contactabilidad_Únicos':
-                    df_sheet = df_contacto
-                elif sheet_name == 'Resumen_Sectores':
-                    df_sheet = df_sec
-                else:
-                    df_sheet = df_prof
-                
-                for col_num, value in enumerate(df_sheet.columns.values):
-                    worksheet.write(0, col_num, value, header_format)
-                    max_len = max(df_sheet.iloc[:, col_num].astype(str).map(len).max(), len(str(value)))
-                    worksheet.set_column(col_num, col_num, min(max_len + 2, 50))
-                    
-                worksheet.autofilter(0, 0, len(df_sheet), len(df_sheet.columns) - 1)
-            
-        excel_data = excel_buffer.getvalue()
-        
-        st.download_button(
-            label="📊 Descargar Nómina Institucional (Excel)",
-            data=excel_data,
-            file_name=f"NOMINA_ESTRATEGICA_{datetime.now().strftime('%Y%m%d')}.xlsx",
-            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            type='primary',
-            width='content'
-        )
-            
-        configuracion_columnas = {
-            "TIPO_RESCATE": st.column_config.TextColumn("Tipo de Rescate", width="small"),
-            "ESTADO_PERCAPITA": st.column_config.TextColumn("Estado (Fugas)", width="medium"),
-            "RUT": st.column_config.TextColumn("RUT", width="small"),
-            "NOMBRE_PACIENTE": st.column_config.TextColumn("Nombre Paciente", width="medium"),
-            "TELEFONO": st.column_config.TextColumn("Teléfono", width="small"),
-            "EDAD_ACTUAL": st.column_config.NumberColumn("Edad"),
-            "SECTOR": "Sector",
-            "POLICLINICO": "Policlínico",
-            "PROFESION": "Especialidad",
-            "NOMBRE_PROFESIONAL": "Profesional",
-            "FECHA_AGENDADA": "Fecha",
-            "HORA_AGENDADA": "Hora"
-        }
-        
-        st.dataframe(
-            df_sorted[cols_final_table],
-            width='stretch',
-            hide_index=True,
-            column_config=configuracion_columnas
-        )
-
-        if st.button("🔄 Forzar Actualización desde la Nube"): 
-            st.cache_data.clear()
-            st.rerun()
-
-    with tab4:
-        st.markdown("### 📝 Registro Manual de Pacientes Rescatados")
-        st.info("Los pacientes registrados aquí **desaparecerán automáticamente** de las brechas de per cápita pendientes.")
-        
-        if not df_filtered.empty:
-            df_ordenado_4 = df_filtered.copy()
-            if 'FECHA_AGENDADA' in df_ordenado_4.columns:
-                fecha_b = df_ordenado_4['FECHA_AGENDADA'].astype(str).str.split(' ').str[0].replace({'nan': '', 'None': ''})
-                if 'HORA_AGENDADA' in df_ordenado_4.columns:
-                    hora_b = df_ordenado_4['HORA_AGENDADA'].astype(str).replace({'nan': '00:00', 'None': '00:00', '': '00:00'})
-                    df_ordenado_4['FECHA_HORA_STR'] = fecha_b + ' ' + hora_b
-                    df_ordenado_4['FECHA_HORA'] = pd.to_datetime(df_ordenado_4['FECHA_HORA_STR'], format='mixed', dayfirst=True, errors='coerce')
-                else:
-                    df_ordenado_4['FECHA_HORA'] = pd.to_datetime(fecha_b, errors='coerce', dayfirst=True)
-                idx_nat = df_ordenado_4['FECHA_HORA'].isna() & (fecha_b != '')
-                if idx_nat.any():
-                    df_ordenado_4.loc[idx_nat, 'FECHA_HORA'] = pd.to_datetime(fecha_b[idx_nat], errors='coerce', dayfirst=True)
-                df_ordenado_4 = df_ordenado_4.sort_values(by='FECHA_HORA', ascending=True)
-            
-            def format_option(row):
-                try:
-                    f = row['FECHA_AGENDADA']
-                    h = row['HORA_AGENDADA']
-                    if pd.isna(f) or pd.isna(h):
-                        return f"{row['RUT']} - {row['NOMBRE_PACIENTE']}"
-                    return f"{row['RUT']} - {row['NOMBRE_PACIENTE']} ({f} {h})"
-                except:
-                    return str(row['RUT'])
-
-            df_ordenado_4['LABEL_SELECT'] = df_ordenado_4.apply(format_option, axis=1)
-            opciones_dict = dict(zip(df_ordenado_4['LABEL_SELECT'], df_ordenado_4['RUT']))
-            
-            rut_label = st.selectbox("Seleccione el paciente a rescatar (Ordenado cronológicamente)", [""] + list(opciones_dict.keys()))
-            
-            if rut_label:
-                rut_seleccionado = opciones_dict[rut_label]
-                paciente_data = df_filtered[df_filtered['RUT'] == rut_seleccionado].iloc[0]
-                
-                # Retrieve TIPO_RESCATE
+                # Clasificación Cronológica (Chile)
                 import pytz
                 from datetime import datetime
                 chile_tz = pytz.timezone('America/Santiago')
                 ahora_chile = datetime.now(chile_tz).replace(tzinfo=None)
+            
+                df_sorted = df_filtered.copy()
+            
+                if 'FECHA_AGENDADA' in df_sorted.columns:
+                    fecha_base = df_sorted['FECHA_AGENDADA'].astype(str).str.split(' ').str[0].replace({'nan': '', 'None': ''})
                 
-                status_rescate = "Desconocido"
-                if 'FECHA_AGENDADA' in df_filtered.columns:
-                    try:
-                        f_base = str(paciente_data['FECHA_AGENDADA']).split(' ')[0]
-                        if f_base in ['nan', 'None', '']: f_base = ""
-                        h_base = str(paciente_data.get('HORA_AGENDADA', '00:00')).replace('nan', '00:00').replace('None', '00:00')
-                        if h_base == '': h_base = '00:00'
-                        
-                        dt_cita = pd.to_datetime(f_base + ' ' + h_base, dayfirst=True)
-                        if pd.isna(dt_cita) and f_base != "":
-                            dt_cita = pd.to_datetime(f_base, dayfirst=True)
-                            
-                        if pd.isna(dt_cita):
-                            status_rescate = "Sin Fecha"
-                        elif dt_cita < ahora_chile:
-                            status_rescate = "Rescate Retroactivo (Cita pasada)"
+                    if 'HORA_AGENDADA' in df_sorted.columns:
+                        hora_base = df_sorted['HORA_AGENDADA'].astype(str).replace({'nan': '00:00', 'None': '00:00', '': '00:00'})
+                        df_sorted['FECHA_HORA_STR'] = fecha_base + ' ' + hora_base
+                        df_sorted['FECHA_HORA'] = pd.to_datetime(df_sorted['FECHA_HORA_STR'], format='mixed', dayfirst=True, errors='coerce')
+                    else:
+                        df_sorted['FECHA_HORA'] = pd.to_datetime(fecha_base, errors='coerce', dayfirst=True)
+                    
+                    # Fallback: si por culpa de la hora da NaT, intentar solo con la fecha
+                    idx_nat = df_sorted['FECHA_HORA'].isna() & (fecha_base != '')
+                    if idx_nat.any():
+                        df_sorted.loc[idx_nat, 'FECHA_HORA'] = pd.to_datetime(fecha_base[idx_nat], errors='coerce', dayfirst=True)
+                
+                    df_sorted = df_sorted.sort_values(by='FECHA_HORA', ascending=True)
+                
+                    def categorize_rescue(dt):
+                        if pd.isna(dt):
+                            return "Sin Fecha"
+                        if dt < ahora_chile:
+                            return "Rescate Retroactivo"
                         else:
-                            status_rescate = "Por Rescatar (Cita futura)"
-                    except:
-                        pass
-                
-                if status_rescate == "Rescate Retroactivo (Cita pasada)":
-                    st.warning(f"⚠️ **Estado de la Hora:** {status_rescate} - ¡Paciente ya se atendió! Procede a capturarlo a la brevedad.")
-                elif status_rescate == "Por Rescatar (Cita futura)":
-                    st.success(f"✅ **Estado de la Hora:** {status_rescate} - ¡Estás a tiempo de interceptarlo en su próxima atención!")
+                            return "Por Rescatar"
+                        
+                    df_sorted['TIPO_RESCATE'] = df_sorted['FECHA_HORA'].apply(categorize_rescue)
                 else:
-                    st.info(f"ℹ️ **Estado de la Hora:** {status_rescate} - (Demanda espontánea o sin agendamiento formal).")
+                    df_sorted['TIPO_RESCATE'] = "Por Rescatar"
+            
+                c_met, c_chart = st.columns([1.2, 1])
+                with c_met:
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    filtro_tipo = st.radio("Filtro de Gestión (Cronológico):", ["🟢 Mostrar Todo", "🔵 Rescate Retroactivo", "🟡 Por Rescatar"], horizontal=False)
+                    if "Sin Fecha" in df_sorted['TIPO_RESCATE'].values:
+                        st.info("💡 **Sin Fecha:** Atenciones que el sistema no tiene registradas con hora agendada (Ej. demanda espontánea).")
+            
+                with c_chart:
+                    df_pie = df_sorted['TIPO_RESCATE'].value_counts().reset_index()
+                    df_pie.columns = ['Tipo', 'Cantidad']
+                    fig_donut = px.pie(df_pie, values='Cantidad', names='Tipo', hole=0.5, 
+                                       color='Tipo', color_discrete_map={'Rescate Retroactivo': '#0A6E8D', 'Por Rescatar': '#FB8500', 'Sin Fecha': '#6B7A90'},
+                                       title="Estado de Horas")
+                    fig_donut.update_traces(textposition='inside', textinfo='percent+label', marker=dict(line=dict(color='#FFFFFF', width=2)))
+                    fig_donut.update_layout(showlegend=False, margin=dict(t=30, b=0, l=0, r=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
+                    st.plotly_chart(fig_donut, width='stretch', theme=None)
+                
+                if filtro_tipo == "🔵 Rescate Retroactivo":
+                    df_sorted = df_sorted[df_sorted['TIPO_RESCATE'] == "Rescate Retroactivo"]
+                elif filtro_tipo == "🟡 Por Rescatar":
+                    df_sorted = df_sorted[df_sorted['TIPO_RESCATE'] == "Por Rescatar"]
+            
+            cols_final_table = [c for c in df_sorted.columns if c not in ['EDAD_NUM_CHART', 'FECHA_HORA', 'FECHA_HORA_STR', 'RUT_CLEAN', 'LABEL_SELECT']]
+            if 'TIPO_RESCATE' in cols_final_table:
+                cols_final_table.insert(0, cols_final_table.pop(cols_final_table.index('TIPO_RESCATE')))
+            if 'ESTADO_PERCAPITA' in cols_final_table:
+                cols_final_table.insert(1, cols_final_table.pop(cols_final_table.index('ESTADO_PERCAPITA')))
+
+            import io
+            excel_buffer = io.BytesIO()
+            with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
+                df_export = df_sorted[cols_final_table].copy()
+            
+                conteo_atenciones = df_export.groupby('RUT').size().reset_index(name='CANT_ATENCIONES')
+                df_export = df_export.merge(conteo_atenciones, on='RUT', how='left')
+            
+                cols_export = list(df_export.columns)
+                cols_export.insert(2, cols_export.pop(cols_export.index('CANT_ATENCIONES')))
+                df_export = df_export[cols_export]
+            
+                df_export.to_excel(writer, index=False, sheet_name='Nómina_Completa')
+            
+                if 'FECHA_HORA' in df_sorted.columns:
+                    df_contacto = df_sorted.sort_values('FECHA_HORA', ascending=False).drop_duplicates(subset=['RUT'], keep='first').copy()
+                else:
+                    df_contacto = df_sorted.drop_duplicates(subset=['RUT'], keep='first').copy()
+                
+                cols_contacto = [c for c in ['RUT', 'NOMBRE_PACIENTE', 'TELEFONO', 'SECTOR', 'EDAD_ACTUAL', 'FECHA_AGENDADA', 'HORA_AGENDADA', 'NOMBRE_PROFESIONAL', 'MOTIVO_CONSULTA'] if c in df_contacto.columns]
+                df_contacto = df_contacto[cols_contacto]
+                df_contacto = df_contacto.merge(conteo_atenciones, on='RUT', how='left')
+                df_contacto.rename(columns={'FECHA_AGENDADA': 'ULTIMA_FECHA_AGENDADA', 'HORA_AGENDADA': 'ULTIMA_HORA_AGENDADA'}, inplace=True)
+                df_contacto.to_excel(writer, index=False, sheet_name='Contactabilidad_Únicos')
+            
+                if 'SECTOR' in df_contacto.columns:
+                    df_sec = df_contacto.groupby('SECTOR')['RUT'].nunique().reset_index(name='Total_Pacientes_Unicos')
+                    df_sec['Fuga_Estimada_CLP'] = df_sec['Total_Pacientes_Unicos'] * 16872
+                    df_sec = df_sec.sort_values('Total_Pacientes_Unicos', ascending=False)
+                    df_sec.to_excel(writer, index=False, sheet_name='Resumen_Sectores')
+                
+                if 'NOMBRE_PROFESIONAL' in df_contacto.columns:
+                    df_prof = df_contacto.groupby('NOMBRE_PROFESIONAL')['RUT'].nunique().reset_index(name='Total_Pacientes_Unicos')
+                    df_prof['Fuga_Estimada_CLP'] = df_prof['Total_Pacientes_Unicos'] * 16872
+                    df_prof = df_prof.sort_values('Total_Pacientes_Unicos', ascending=False)
+                    df_prof.to_excel(writer, index=False, sheet_name='Resumen_Profesionales')
+
+                workbook = writer.book
+                header_format = workbook.add_format({
+                    'bold': True, 'font_color': 'white', 'bg_color': '#00A8E8', 'border': 1
+                })
+            
+                for sheet_name in writer.sheets:
+                    worksheet = writer.sheets[sheet_name]
+                    if sheet_name == 'Nómina_Completa':
+                        df_sheet = df_export
+                    elif sheet_name == 'Contactabilidad_Únicos':
+                        df_sheet = df_contacto
+                    elif sheet_name == 'Resumen_Sectores':
+                        df_sheet = df_sec
+                    else:
+                        df_sheet = df_prof
+                
+                    for col_num, value in enumerate(df_sheet.columns.values):
+                        worksheet.write(0, col_num, value, header_format)
+                        max_len = max(df_sheet.iloc[:, col_num].astype(str).map(len).max(), len(str(value)))
+                        worksheet.set_column(col_num, col_num, min(max_len + 2, 50))
                     
-                with st.form("form_rescate", clear_on_submit=True):
-                    c_f1, c_f2 = st.columns(2)
-                    with c_f1:
-                        nombre = st.text_input("Nombres", value=paciente_data['NOMBRE_PACIENTE'])
-                        opciones_centro = ["Centro De Salud Familiar Chol Chol", "Posta De Salud Rural Malalche", "Posta De Salud Rural Huentelar", "Posta De Salud Rural Huamaqui"]
-                        centro_actual = paciente_data['NOMBRE_CENTRO'] if 'NOMBRE_CENTRO' in df_filtered.columns else ""
-                        idx_centro = opciones_centro.index(centro_actual) if centro_actual in opciones_centro else 0
-                        centro = st.selectbox("Centro de Salud", opciones_centro, index=idx_centro)
-                        rut_val = st.text_input("RUT", value=paciente_data['RUT'], disabled=True)
-                    with c_f2:
-                        # Valores dinámicos del per cápita más reciente
-                        def_anio = dem_info.get('max_anio_percapita', datetime.now().year)
-                        def_mes_num = dem_info.get('max_mes_percapita', datetime.now().month)
-                        
-                        meses_dict = {1:"Enero",2:"Febrero",3:"Marzo",4:"Abril",5:"Mayo",6:"Junio",7:"Julio",8:"Agosto",9:"Septiembre",10:"Octubre",11:"Noviembre",12:"Diciembre"}
-                        anio = st.number_input("Año de Corte", value=int(def_anio), min_value=2020)
-                        
-                        idx_mes = def_mes_num - 1 if 0 <= def_mes_num - 1 < 12 else 0
-                        mes = st.selectbox("Mes de Corte", list(meses_dict.values()), index=int(idx_mes))
-                    
-                    categoria = st.selectbox("Categoría de Gestión*", [
-                        "Inscrito Exitosamente (Nuevo Inscrito)", 
-                        "Inscrito Exitosamente (Re-inscripción)", 
-                        "Presenta registro en plataforma Fonasa",
-                        "Cambio de Domicilio", 
-                        "Inscrito en Otro Centro", 
-                        "Fallecido", 
-                        "No Contesta / Inubicable",
-                        "Rechaza Inscripción",
-                        "Observación: Paciente Isapre",
-                        "Observación: Carencia / Bloqueo Fonasa",
-                        "Otro"
-                    ])
-                    
-                    fecha_inscrip_otro = None
-                    acredita_domicilio = False
-                    # Mostrar campos adicionales solo si el paciente cumple los requisitos cronologicos de recurrencia (>= 3 atenciones)
-                    cant_aten = paciente_data.get('CANT_ATENCIONES', 1)
-                    if categoria == "Inscrito en Otro Centro" and cant_aten >= 3:
-                        st.markdown("<div style='background-color: #FFF3CD; padding: 10px; border-radius: 5px; margin-bottom: 10px;'>", unsafe_allow_html=True)
-                        st.markdown("<strong style='color:#856404;'>ℹ️ Datos para Excepción de Bloqueo (1 Año)</strong>", unsafe_allow_html=True)
-                        st.markdown(f"<p style='font-size:0.85rem; color:#666; margin-bottom: 5px;'>Este paciente tiene {cant_aten} atenciones y es candidato a Captura Potencial si su año venció.</p>", unsafe_allow_html=True)
-                        fecha_inscrip_otro = st.date_input("Fecha aprox. de inscripción en su centro actual (Si la conoce)", value=None, min_value=datetime(2000, 1, 1))
-                        acredita_domicilio = st.checkbox("¿Acredita cambio de domicilio laboral o particular con documento?")
-                        st.markdown("</div>", unsafe_allow_html=True)
-                    obs = st.text_area("Detalles Adicionales (Opcional)")
-                    
-                    if st.form_submit_button("Confirmar Rescate/Gestión", type="primary", width='stretch'):
-                        # ===== GUARDAR EN GOOGLE SHEETS ======
+                    worksheet.autofilter(0, 0, len(df_sheet), len(df_sheet.columns) - 1)
+            
+            excel_data = excel_buffer.getvalue()
+        
+            st.download_button(
+                label="📊 Descargar Nómina Institucional (Excel)",
+                data=excel_data,
+                file_name=f"NOMINA_ESTRATEGICA_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                type='primary',
+                width='content'
+            )
+            
+            configuracion_columnas = {
+                "TIPO_RESCATE": st.column_config.TextColumn("Tipo de Rescate", width="small"),
+                "ESTADO_PERCAPITA": st.column_config.TextColumn("Estado (Fugas)", width="medium"),
+                "RUT": st.column_config.TextColumn("RUT", width="small"),
+                "NOMBRE_PACIENTE": st.column_config.TextColumn("Nombre Paciente", width="medium"),
+                "TELEFONO": st.column_config.TextColumn("Teléfono", width="small"),
+                "EDAD_ACTUAL": st.column_config.NumberColumn("Edad"),
+                "SECTOR": "Sector",
+                "POLICLINICO": "Policlínico",
+                "PROFESION": "Especialidad",
+                "NOMBRE_PROFESIONAL": "Profesional",
+                "FECHA_AGENDADA": "Fecha",
+                "HORA_AGENDADA": "Hora"
+            }
+        
+            st.dataframe(
+                df_sorted[cols_final_table],
+                width='stretch',
+                hide_index=True,
+                column_config=configuracion_columnas
+            )
+
+            if st.button("🔄 Forzar Actualización desde la Nube"): 
+                st.cache_data.clear()
+                st.rerun()
+
+    if show_tab4:
+        with tab4:
+            st.markdown("### 📝 Registro Manual de Pacientes Rescatados")
+            st.info("Los pacientes registrados aquí **desaparecerán automáticamente** de las brechas de per cápita pendientes.")
+        
+            if not df_filtered.empty:
+                df_ordenado_4 = df_filtered.copy()
+                if 'FECHA_AGENDADA' in df_ordenado_4.columns:
+                    fecha_b = df_ordenado_4['FECHA_AGENDADA'].astype(str).str.split(' ').str[0].replace({'nan': '', 'None': ''})
+                    if 'HORA_AGENDADA' in df_ordenado_4.columns:
+                        hora_b = df_ordenado_4['HORA_AGENDADA'].astype(str).replace({'nan': '00:00', 'None': '00:00', '': '00:00'})
+                        df_ordenado_4['FECHA_HORA_STR'] = fecha_b + ' ' + hora_b
+                        df_ordenado_4['FECHA_HORA'] = pd.to_datetime(df_ordenado_4['FECHA_HORA_STR'], format='mixed', dayfirst=True, errors='coerce')
+                    else:
+                        df_ordenado_4['FECHA_HORA'] = pd.to_datetime(fecha_b, errors='coerce', dayfirst=True)
+                    idx_nat = df_ordenado_4['FECHA_HORA'].isna() & (fecha_b != '')
+                    if idx_nat.any():
+                        df_ordenado_4.loc[idx_nat, 'FECHA_HORA'] = pd.to_datetime(fecha_b[idx_nat], errors='coerce', dayfirst=True)
+                    df_ordenado_4 = df_ordenado_4.sort_values(by='FECHA_HORA', ascending=True)
+            
+                def format_option(row):
+                    try:
+                        f = row['FECHA_AGENDADA']
+                        h = row['HORA_AGENDADA']
+                        if pd.isna(f) or pd.isna(h):
+                            return f"{row['RUT']} - {row['NOMBRE_PACIENTE']}"
+                        return f"{row['RUT']} - {row['NOMBRE_PACIENTE']} ({f} {h})"
+                    except:
+                        return str(row['RUT'])
+
+                df_ordenado_4['LABEL_SELECT'] = df_ordenado_4.apply(format_option, axis=1)
+                opciones_dict = dict(zip(df_ordenado_4['LABEL_SELECT'], df_ordenado_4['RUT']))
+            
+                rut_label = st.selectbox("Seleccione el paciente a rescatar (Ordenado cronológicamente)", [""] + list(opciones_dict.keys()))
+            
+                if rut_label:
+                    rut_seleccionado = opciones_dict[rut_label]
+                    paciente_data = df_filtered[df_filtered['RUT'] == rut_seleccionado].iloc[0]
+                
+                    # Retrieve TIPO_RESCATE
+                    import pytz
+                    from datetime import datetime
+                    chile_tz = pytz.timezone('America/Santiago')
+                    ahora_chile = datetime.now(chile_tz).replace(tzinfo=None)
+                
+                    status_rescate = "Desconocido"
+                    if 'FECHA_AGENDADA' in df_filtered.columns:
                         try:
-                            url_rescates = st.secrets["URL_RESCATES"]
-                            if not url_rescates or len(url_rescates) < 10:
-                                st.error("❌ Error: No se ha configurado la URL para guardar rescates (URL_RESCATES).")
-                                st.stop()
+                            f_base = str(paciente_data['FECHA_AGENDADA']).split(' ')[0]
+                            if f_base in ['nan', 'None', '']: f_base = ""
+                            h_base = str(paciente_data.get('HORA_AGENDADA', '00:00')).replace('nan', '00:00').replace('None', '00:00')
+                            if h_base == '': h_base = '00:00'
+                        
+                            dt_cita = pd.to_datetime(f_base + ' ' + h_base, dayfirst=True)
+                            if pd.isna(dt_cita) and f_base != "":
+                                dt_cita = pd.to_datetime(f_base, dayfirst=True)
                             
-                            scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-                            creds = Credentials.from_service_account_info(APP_CONFIG['credenciales'], scopes=scope)
-                            client_gs = gspread.authorize(creds)
-                            
-                            sheet_rescates = client_gs.open_by_url(url_rescates)
-                            
-                            stgo_tz = pytz.timezone('America/Santiago')
-                            fecha_rescate = datetime.now(stgo_tz).strftime("%Y-%m-%d %H:%M:%S")
-                            usuario_gestor = MASTER_ACCOUNT_ID
-                            rol_usuario = APP_CONFIG.get('rol', 'SIN_ROL')
-                            
-                            # Logica de hoja destino
-                            target_sheet_name = "registro_rescates" if categoria in ["Inscrito Exitosamente (Nuevo Inscrito)", "Inscrito Exitosamente (Re-inscripción)", "Presenta registro en plataforma Fonasa"] else "bajas_percapita"
-                            
-                            try:
-                                ws_target = sheet_rescates.worksheet(target_sheet_name)
-                            except gspread.exceptions.WorksheetNotFound:
-                                ws_target = sheet_rescates.add_worksheet(title=target_sheet_name, rows="1000", cols="10")
-                                ws_target.append_row(["NOMBRES", "NOMBRE_CENTRO", "RUT", "ANIO_CORTE", "MES_CORTE", "CATEGORIA", "OBSERVACION", "FECHA_RESCATE", "USUARIO_GESTOR"])
-                            
-                            if target_sheet_name == "registro_rescates":
-                                observacion_final = f"[{categoria}] {obs}" if obs else categoria
-                                row = [nombre, centro, rut_val, anio, mes, categoria, observacion_final, fecha_rescate, usuario_gestor]
+                            if pd.isna(dt_cita):
+                                status_rescate = "Sin Fecha"
+                            elif dt_cita < ahora_chile:
+                                status_rescate = "Rescate Retroactivo (Cita pasada)"
                             else:
-                                obs_final = obs
-                                if categoria == "Inscrito en Otro Centro":
-                                    if acredita_domicilio:
-                                        obs_final = f"[ACREDITA_DOMICILIO: SI] {obs_final}"
-                                    elif fecha_inscrip_otro:
-                                        vence_dt = fecha_inscrip_otro + pd.DateOffset(years=1)
-                                        vence_str = vence_dt.strftime("%Y-%m")
-                                        obs_final = f"[VENCE_BLOQUEO: {vence_str}] {obs_final}"
-                                        
-                                row = [nombre, centro, rut_val, anio, mes, categoria, obs_final, fecha_rescate, usuario_gestor]
-                                
-                            ws_target.append_row(row)
-                            
-                            # Logica de Auditoria
-                            try:
-                                ws_auditoria = sheet_rescates.worksheet("auditoria")
-                            except gspread.exceptions.WorksheetNotFound:
-                                ws_auditoria = sheet_rescates.add_worksheet(title="auditoria", rows="1000", cols="10")
-                                ws_auditoria.append_row(["FECHA_HORA_CL", "CUENTA", "ROL", "ACCION", "RUT_PACIENTE", "NOMBRE_PACIENTE", "CATEGORIA_GESTION", "OBSERVACION"])
-                            
-                            fila_auditoria = [fecha_rescate, usuario_gestor, rol_usuario, "NUEVO REGISTRO", rut_val, nombre, categoria, obs]
-                            ws_auditoria.append_row(fila_auditoria)
-                            
-                            st.success(f"✅ ¡Paciente {nombre} ({rut_val}) registrado en la categoría '{categoria}'!")
-                            st.cache_data.clear()
-                            time.sleep(2)
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"❌ Error guardando datos: {e}")
-        else:
-            st.warning("No hay pacientes pendientes con los filtros actuales para rescatar.")
-
-    with tab5:
-        st.markdown("### 🏆 Métricas y Rendimiento de Rescates")
-        st.info("Indicadores de gestión y rendimiento del equipo de rescate por periodo de evaluación.")
-        
-        df_rescates_raw = APP_CONFIG['datos'].get('rescates_crudos', pd.DataFrame()).copy()
-        df_bajas_raw = APP_CONFIG['datos'].get('bajas_crudas', pd.DataFrame()).copy()
-        
-        # Filtros por defecto desde la última base percapita
-        def_anio = int(dem_info.get('max_anio_percapita', datetime.now().year))
-        def_mes_num = int(dem_info.get('max_mes_percapita', datetime.now().month))
-        meses_dict = {1:"Enero",2:"Febrero",3:"Marzo",4:"Abril",5:"Mayo",6:"Junio",7:"Julio",8:"Agosto",9:"Septiembre",10:"Octubre",11:"Noviembre",12:"Diciembre"}
-        def_mes_nombre = meses_dict.get(def_mes_num, "Enero")
-        
-        c_f1, c_f2 = st.columns(2)
-        
-        anios_disp = [def_anio]
-        meses_disp = [def_mes_nombre]
-        
-        if not df_rescates_raw.empty and 'ANIO_CORTE' in df_rescates_raw.columns:
-            anios_disp.extend(df_rescates_raw['ANIO_CORTE'].dropna().unique().tolist())
-            meses_disp.extend(df_rescates_raw['MES_CORTE'].dropna().astype(str).str.title().unique().tolist())
-            
-        anios_limpios = []
-        for a in anios_disp:
-            try:
-                anios_limpios.append(int(float(a)))
-            except:
-                pass
-        anios_disp = sorted(list(set(anios_limpios)))
-        meses_disp = sorted(list(set([str(m).strip() for m in meses_disp if str(m).strip().lower() != 'nan'])))
-        
-        with c_f1:
-            filtro_anio = st.selectbox("Año de Evaluación", anios_disp, index=anios_disp.index(def_anio) if def_anio in anios_disp else 0)
-        with c_f2:
-            filtro_mes = st.selectbox("Mes de Evaluación", meses_disp, index=meses_disp.index(def_mes_nombre) if def_mes_nombre in meses_disp else 0)
-            
-        if not df_rescates_raw.empty and 'ANIO_CORTE' in df_rescates_raw.columns and 'MES_CORTE' in df_rescates_raw.columns:
-            df_rescates_raw['ANIO_CORTE_NUM'] = pd.to_numeric(df_rescates_raw['ANIO_CORTE'], errors='coerce')
-            df_rescates_raw['MES_CORTE_STR'] = df_rescates_raw['MES_CORTE'].astype(str).str.title().str.strip()
-            df_rescates_raw = df_rescates_raw[
-                (df_rescates_raw['ANIO_CORTE_NUM'] == filtro_anio) & 
-                (df_rescates_raw['MES_CORTE_STR'] == filtro_mes)
-            ]
-            
-        if not df_bajas_raw.empty and 'ANIO_CORTE' in df_bajas_raw.columns and 'MES_CORTE' in df_bajas_raw.columns:
-            df_bajas_raw['ANIO_CORTE_NUM'] = pd.to_numeric(df_bajas_raw['ANIO_CORTE'], errors='coerce')
-            df_bajas_raw['MES_CORTE_STR'] = df_bajas_raw['MES_CORTE'].astype(str).str.title().str.strip()
-            df_bajas_raw = df_bajas_raw[
-                (df_bajas_raw['ANIO_CORTE_NUM'] == filtro_anio) & 
-                (df_bajas_raw['MES_CORTE_STR'] == filtro_mes)
-            ]
-        
-        if df_rescates_raw.empty:
-            st.warning(f"Aún no hay registros manuales de rescates para el periodo {filtro_mes} {filtro_anio}.")
-        else:
-            if 'FECHA_RESCATE' in df_rescates_raw.columns:
-                df_rescates_raw['FECHA_RESCATE_DT'] = pd.to_datetime(df_rescates_raw['FECHA_RESCATE'], errors='coerce')
-                df_rescates_raw['MES_RESCATE'] = df_rescates_raw['FECHA_RESCATE_DT'].dt.to_period('M').astype(str)
-            else:
-                df_rescates_raw['FECHA_RESCATE_DT'] = pd.NaT
-                df_rescates_raw['MES_RESCATE'] = 'Sin Fecha'
+                                status_rescate = "Por Rescatar (Cita futura)"
+                        except:
+                            pass
                 
-            total_rescates = len(df_rescates_raw)
-            mes_actual_str = pd.Timestamp.today().strftime('%Y-%m')
-            rescates_este_mes = df_rescates_raw[df_rescates_raw['MES_RESCATE'] == mes_actual_str].shape[0] if not df_rescates_raw.empty else 0
-            
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                st.metric(label="Total Rescates en el Periodo", value=total_rescates)
-            with c2:
-                st.metric(label="Rescates Este Mes", value=rescates_este_mes)
-            with c3:
-                gestores_unicos = df_rescates_raw['USUARIO_GESTOR'].nunique() if 'USUARIO_GESTOR' in df_rescates_raw.columns else 0
-                st.metric(label="Gestores Activos", value=gestores_unicos)
-                
-            st.markdown("---")
-            col_a, col_b = st.columns(2)
-            
-            with col_a:
-                st.markdown("#### 🥇 Top Gestores")
-                if 'USUARIO_GESTOR' in df_rescates_raw.columns:
-                    df_gestores = df_rescates_raw['USUARIO_GESTOR'].value_counts().reset_index()
-                    df_gestores.columns = ['USUARIO_GESTOR', 'CANTIDAD']
-                    fig_gestores = px.bar(df_gestores, x='CANTIDAD', y='USUARIO_GESTOR', orientation='h', color='CANTIDAD', color_continuous_scale="Teal", text='CANTIDAD')
-                    fig_gestores.update_traces(textposition='auto', marker_line_color='rgb(8,48,107)', marker_line_width=1.5, opacity=0.8)
-                    fig_gestores.update_layout(yaxis={'categoryorder':'total ascending'}, showlegend=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(l=0, r=0, t=30, b=0))
-                    st.plotly_chart(fig_gestores, width="stretch")
-            
-            with col_b:
-                st.markdown("#### 🏥 Rescates por Centro")
-                if 'NOMBRE_CENTRO' in df_rescates_raw.columns:
-                    df_centros = df_rescates_raw['NOMBRE_CENTRO'].value_counts().reset_index()
-                    df_centros.columns = ['NOMBRE_CENTRO', 'CANTIDAD']
-                    fig_centros = px.pie(df_centros, names='NOMBRE_CENTRO', values='CANTIDAD', hole=0.5, color_discrete_sequence=px.colors.qualitative.Pastel)
-                    fig_centros.update_traces(textposition='inside', textinfo='percent+label', pull=[0.05]*len(df_centros))
-                    fig_centros.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', showlegend=False, margin=dict(l=0, r=0, t=30, b=0))
-                    st.plotly_chart(fig_centros, width="stretch")
-            
-            st.markdown("#### 📈 Evolución Diaria de Rescates")
-            if not df_rescates_raw['FECHA_RESCATE_DT'].isna().all():
-                df_rescates_raw['FECHA_DIA'] = df_rescates_raw['FECHA_RESCATE_DT'].dt.strftime('%d-%m-%Y')
-                df_tiempo = df_rescates_raw.groupby('FECHA_DIA').size().reset_index(name='CANTIDAD')
-                # Convert back to datetime just for sorting chronologically, then back to string
-                df_tiempo['FECHA_SORT'] = pd.to_datetime(df_tiempo['FECHA_DIA'], format='%d-%m-%Y')
-                df_tiempo = df_tiempo.sort_values('FECHA_SORT')
-                
-                fig_tiempo = px.area(df_tiempo, x='FECHA_DIA', y='CANTIDAD', markers=True, text='CANTIDAD')
-                fig_tiempo.update_traces(textposition="top center", line_color='#00A8E8', fillcolor='rgba(0, 168, 232, 0.2)', marker=dict(size=10, color="#FFB703", line=dict(width=2, color='white')))
-                fig_tiempo.update_layout(xaxis_type='category', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', xaxis_title="Fecha", yaxis_title="Rescates", margin=dict(l=0, r=0, t=30, b=0))
-                st.plotly_chart(fig_tiempo, width="stretch")
-                
-            with st.expander("📄 Ver Datos de Rescates Exitosos (Crudos)"):
-                st.dataframe(df_rescates_raw, width='stretch')
-                
-        if not df_bajas_raw.empty:
-            st.markdown("#### 🚫 Bajas y Pacientes No Inscritos")
-            st.info("Pacientes que se acercaron al centro pero no pudieron ser inscritos en el per cápita. Estos pacientes ya han sido removidos de las brechas.")
-            
-            c1_b, c2_b = st.columns(2)
-            with c1_b:
-                st.metric(label="Total Bajas Registradas", value=len(df_bajas_raw))
-                
-            with c2_b:
-                if 'CATEGORIA' in df_bajas_raw.columns:
-                    df_cats = df_bajas_raw['CATEGORIA'].value_counts().reset_index()
-                    df_cats.columns = ['CATEGORIA', 'CANTIDAD']
-                    fig_cats = px.pie(df_cats, names='CATEGORIA', values='CANTIDAD', hole=0.4)
-                    fig_cats.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
-                    st.plotly_chart(fig_cats, width='stretch')
+                    if status_rescate == "Rescate Retroactivo (Cita pasada)":
+                        st.warning(f"⚠️ **Estado de la Hora:** {status_rescate} - ¡Paciente ya se atendió! Procede a capturarlo a la brevedad.")
+                    elif status_rescate == "Por Rescatar (Cita futura)":
+                        st.success(f"✅ **Estado de la Hora:** {status_rescate} - ¡Estás a tiempo de interceptarlo en su próxima atención!")
+                    else:
+                        st.info(f"ℹ️ **Estado de la Hora:** {status_rescate} - (Demanda espontánea o sin agendamiento formal).")
                     
-            with st.expander("📄 Ver Datos de Bajas (Crudos)"):
-                st.dataframe(df_bajas_raw, width='stretch')
+                    with st.form("form_rescate", clear_on_submit=True):
+                        c_f1, c_f2 = st.columns(2)
+                        with c_f1:
+                            nombre = st.text_input("Nombres", value=paciente_data['NOMBRE_PACIENTE'])
+                            opciones_centro = ["Centro De Salud Familiar Chol Chol", "Posta De Salud Rural Malalche", "Posta De Salud Rural Huentelar", "Posta De Salud Rural Huamaqui"]
+                            centro_actual = paciente_data['NOMBRE_CENTRO'] if 'NOMBRE_CENTRO' in df_filtered.columns else ""
+                            idx_centro = opciones_centro.index(centro_actual) if centro_actual in opciones_centro else 0
+                            centro = st.selectbox("Centro de Salud", opciones_centro, index=idx_centro)
+                            rut_val = st.text_input("RUT", value=paciente_data['RUT'], disabled=True)
+                        with c_f2:
+                            # Valores dinámicos del per cápita más reciente
+                            def_anio = dem_info.get('max_anio_percapita', datetime.now().year)
+                            def_mes_num = dem_info.get('max_mes_percapita', datetime.now().month)
+                        
+                            meses_dict = {1:"Enero",2:"Febrero",3:"Marzo",4:"Abril",5:"Mayo",6:"Junio",7:"Julio",8:"Agosto",9:"Septiembre",10:"Octubre",11:"Noviembre",12:"Diciembre"}
+                            anio = st.number_input("Año de Corte", value=int(def_anio), min_value=2020)
+                        
+                            idx_mes = def_mes_num - 1 if 0 <= def_mes_num - 1 < 12 else 0
+                            mes = st.selectbox("Mes de Corte", list(meses_dict.values()), index=int(idx_mes))
+                    
+                        categoria = st.selectbox("Categoría de Gestión*", [
+                            "Inscrito Exitosamente (Nuevo Inscrito)", 
+                            "Inscrito Exitosamente (Re-inscripción)", 
+                            "Presenta registro en plataforma Fonasa",
+                            "Cambio de Domicilio", 
+                            "Inscrito en Otro Centro", 
+                            "Fallecido", 
+                            "No Contesta / Inubicable",
+                            "Rechaza Inscripción",
+                            "Observación: Paciente Isapre",
+                            "Observación: Carencia / Bloqueo Fonasa",
+                            "Otro"
+                        ])
+                    
+                        fecha_inscrip_otro = None
+                        acredita_domicilio = False
+                        # Mostrar campos adicionales solo si el paciente cumple los requisitos cronologicos de recurrencia (>= 3 atenciones)
+                        cant_aten = paciente_data.get('CANT_ATENCIONES', 1)
+                        if categoria == "Inscrito en Otro Centro" and cant_aten >= 3:
+                            st.markdown("<div style='background-color: #FFF3CD; padding: 10px; border-radius: 5px; margin-bottom: 10px;'>", unsafe_allow_html=True)
+                            st.markdown("<strong style='color:#856404;'>ℹ️ Datos para Excepción de Bloqueo (1 Año)</strong>", unsafe_allow_html=True)
+                            st.markdown(f"<p style='font-size:0.85rem; color:#666; margin-bottom: 5px;'>Este paciente tiene {cant_aten} atenciones y es candidato a Captura Potencial si su año venció.</p>", unsafe_allow_html=True)
+                            fecha_inscrip_otro = st.date_input("Fecha aprox. de inscripción en su centro actual (Si la conoce)", value=None, min_value=datetime(2000, 1, 1))
+                            acredita_domicilio = st.checkbox("¿Acredita cambio de domicilio laboral o particular con documento?")
+                            st.markdown("</div>", unsafe_allow_html=True)
+                        obs = st.text_area("Detalles Adicionales (Opcional)")
+                    
+                        if st.form_submit_button("Confirmar Rescate/Gestión", type="primary", width='stretch'):
+                            # ===== GUARDAR EN GOOGLE SHEETS ======
+                            try:
+                                url_rescates = st.secrets["URL_RESCATES"]
+                                if not url_rescates or len(url_rescates) < 10:
+                                    st.error("❌ Error: No se ha configurado la URL para guardar rescates (URL_RESCATES).")
+                                    st.stop()
+                            
+                                scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+                                creds = Credentials.from_service_account_info(APP_CONFIG['credenciales'], scopes=scope)
+                                client_gs = gspread.authorize(creds)
+                            
+                                sheet_rescates = client_gs.open_by_url(url_rescates)
+                            
+                                stgo_tz = pytz.timezone('America/Santiago')
+                                fecha_rescate = datetime.now(stgo_tz).strftime("%Y-%m-%d %H:%M:%S")
+                                usuario_gestor = MASTER_ACCOUNT_ID
+                                rol_usuario = APP_CONFIG.get('rol', 'SIN_ROL')
+                            
+                                # Logica de hoja destino
+                                target_sheet_name = "registro_rescates" if categoria in ["Inscrito Exitosamente (Nuevo Inscrito)", "Inscrito Exitosamente (Re-inscripción)", "Presenta registro en plataforma Fonasa"] else "bajas_percapita"
+                            
+                                try:
+                                    ws_target = sheet_rescates.worksheet(target_sheet_name)
+                                except gspread.exceptions.WorksheetNotFound:
+                                    ws_target = sheet_rescates.add_worksheet(title=target_sheet_name, rows="1000", cols="10")
+                                    ws_target.append_row(["NOMBRES", "NOMBRE_CENTRO", "RUT", "ANIO_CORTE", "MES_CORTE", "CATEGORIA", "OBSERVACION", "FECHA_RESCATE", "USUARIO_GESTOR"])
+                            
+                                if target_sheet_name == "registro_rescates":
+                                    observacion_final = f"[{categoria}] {obs}" if obs else categoria
+                                    row = [nombre, centro, rut_val, anio, mes, categoria, observacion_final, fecha_rescate, usuario_gestor]
+                                else:
+                                    obs_final = obs
+                                    if categoria == "Inscrito en Otro Centro":
+                                        if acredita_domicilio:
+                                            obs_final = f"[ACREDITA_DOMICILIO: SI] {obs_final}"
+                                        elif fecha_inscrip_otro:
+                                            vence_dt = fecha_inscrip_otro + pd.DateOffset(years=1)
+                                            vence_str = vence_dt.strftime("%Y-%m")
+                                            obs_final = f"[VENCE_BLOQUEO: {vence_str}] {obs_final}"
+                                        
+                                    row = [nombre, centro, rut_val, anio, mes, categoria, obs_final, fecha_rescate, usuario_gestor]
+                                
+                                ws_target.append_row(row)
+                            
+                                # Logica de Auditoria
+                                try:
+                                    ws_auditoria = sheet_rescates.worksheet("auditoria")
+                                except gspread.exceptions.WorksheetNotFound:
+                                    ws_auditoria = sheet_rescates.add_worksheet(title="auditoria", rows="1000", cols="10")
+                                    ws_auditoria.append_row(["FECHA_HORA_CL", "CUENTA", "ROL", "ACCION", "RUT_PACIENTE", "NOMBRE_PACIENTE", "CATEGORIA_GESTION", "OBSERVACION"])
+                            
+                                fila_auditoria = [fecha_rescate, usuario_gestor, rol_usuario, "NUEVO REGISTRO", rut_val, nombre, categoria, obs]
+                                ws_auditoria.append_row(fila_auditoria)
+                            
+                                st.success(f"✅ ¡Paciente {nombre} ({rut_val}) registrado en la categoría '{categoria}'!")
+                                st.cache_data.clear()
+                                time.sleep(2)
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"❌ Error guardando datos: {e}")
+            else:
+                st.warning("No hay pacientes pendientes con los filtros actuales para rescatar.")
 
-    with tab6:
-        st.markdown("### 📚 Manual Operativo de Inscripción Per Cápita FONASA")
-        st.info("Este manual detalla los procedimientos oficiales según la normativa del Fondo Nacional de Salud (FONASA).")
+    if show_tab5:
+        with tab5:
+            st.markdown("### 🏆 Métricas y Rendimiento de Rescates")
+            st.info("Indicadores de gestión y rendimiento del equipo de rescate por periodo de evaluación.")
         
-        st.markdown("""
-        #### 1. Marco Legal y Fundamentos del Modelo
-        El sistema de financiamiento Per Cápita de la Atención Primaria de Salud (APS) busca la equidad, eficiencia y transparencia en la asignación de recursos estatales.
-        - **Ley N° 19.378:** Define que los municipios recibirán un aporte estatal mensual determinado por la población inscrita validada.
-        - **Derecho a elección:** Los beneficiarios mayores de edad eligen libremente el centro de la Red Asistencial según su domicilio laboral o particular.
-        - **Negación de atención:** La falta de inscripción **en ningún caso** es causal legal para negar atención médica.
-        - **Pacientes No Beneficiarios (ISAPRES):** Si solicitan atención, son pacientes particulares. Los ingresos quedan para el CESFAM, pero **no generan inscripción Per Cápita**.
+            df_rescates_raw = APP_CONFIG['datos'].get('rescates_crudos', pd.DataFrame()).copy()
+            df_bajas_raw = APP_CONFIG['datos'].get('bajas_crudas', pd.DataFrame()).copy()
         
-        #### 2. Reglas de Inscripción y Bloqueos (Regla del Año)
-        - **Sin Bloqueo:** Un beneficiario puede cambiarse de centro libremente si ha transcurrido **un año o más** desde su última inscripción.
-        - **Con Bloqueo (Menos de un año):** El sistema rechazará el cambio a menos que el paciente demuestre un cambio de domicilio (laboral o particular) presentando un **documento fidedigno**.
-        - **¿Qué es un documento fidedigno?** Certificado de residencia, contrato de trabajo, cuentas a nombre del paciente (luz, agua), certificado indígena. Se deben registrar: Entidad Emisora, Fecha, Número y Firmante.
+            # Filtros por defecto desde la última base percapita
+            def_anio = int(dem_info.get('max_anio_percapita', datetime.now().year))
+            def_mes_num = int(dem_info.get('max_mes_percapita', datetime.now().month))
+            meses_dict = {1:"Enero",2:"Febrero",3:"Marzo",4:"Abril",5:"Mayo",6:"Junio",7:"Julio",8:"Agosto",9:"Septiembre",10:"Octubre",11:"Noviembre",12:"Diciembre"}
+            def_mes_nombre = meses_dict.get(def_mes_num, "Enero")
+        
+            c_f1, c_f2 = st.columns(2)
+        
+            anios_disp = [def_anio]
+            meses_disp = [def_mes_nombre]
+        
+            if not df_rescates_raw.empty and 'ANIO_CORTE' in df_rescates_raw.columns:
+                anios_disp.extend(df_rescates_raw['ANIO_CORTE'].dropna().unique().tolist())
+                meses_disp.extend(df_rescates_raw['MES_CORTE'].dropna().astype(str).str.title().unique().tolist())
+            
+            anios_limpios = []
+            for a in anios_disp:
+                try:
+                    anios_limpios.append(int(float(a)))
+                except:
+                    pass
+            anios_disp = sorted(list(set(anios_limpios)))
+            meses_disp = sorted(list(set([str(m).strip() for m in meses_disp if str(m).strip().lower() != 'nan'])))
+        
+            with c_f1:
+                filtro_anio = st.selectbox("Año de Evaluación", anios_disp, index=anios_disp.index(def_anio) if def_anio in anios_disp else 0)
+            with c_f2:
+                filtro_mes = st.selectbox("Mes de Evaluación", meses_disp, index=meses_disp.index(def_mes_nombre) if def_mes_nombre in meses_disp else 0)
+            
+            if not df_rescates_raw.empty and 'ANIO_CORTE' in df_rescates_raw.columns and 'MES_CORTE' in df_rescates_raw.columns:
+                df_rescates_raw['ANIO_CORTE_NUM'] = pd.to_numeric(df_rescates_raw['ANIO_CORTE'], errors='coerce')
+                df_rescates_raw['MES_CORTE_STR'] = df_rescates_raw['MES_CORTE'].astype(str).str.title().str.strip()
+                df_rescates_raw = df_rescates_raw[
+                    (df_rescates_raw['ANIO_CORTE_NUM'] == filtro_anio) & 
+                    (df_rescates_raw['MES_CORTE_STR'] == filtro_mes)
+                ]
+            
+            if not df_bajas_raw.empty and 'ANIO_CORTE' in df_bajas_raw.columns and 'MES_CORTE' in df_bajas_raw.columns:
+                df_bajas_raw['ANIO_CORTE_NUM'] = pd.to_numeric(df_bajas_raw['ANIO_CORTE'], errors='coerce')
+                df_bajas_raw['MES_CORTE_STR'] = df_bajas_raw['MES_CORTE'].astype(str).str.title().str.strip()
+                df_bajas_raw = df_bajas_raw[
+                    (df_bajas_raw['ANIO_CORTE_NUM'] == filtro_anio) & 
+                    (df_bajas_raw['MES_CORTE_STR'] == filtro_mes)
+                ]
+        
+            if df_rescates_raw.empty:
+                st.warning(f"Aún no hay registros manuales de rescates para el periodo {filtro_mes} {filtro_anio}.")
+            else:
+                if 'FECHA_RESCATE' in df_rescates_raw.columns:
+                    df_rescates_raw['FECHA_RESCATE_DT'] = pd.to_datetime(df_rescates_raw['FECHA_RESCATE'], errors='coerce')
+                    df_rescates_raw['MES_RESCATE'] = df_rescates_raw['FECHA_RESCATE_DT'].dt.to_period('M').astype(str)
+                else:
+                    df_rescates_raw['FECHA_RESCATE_DT'] = pd.NaT
+                    df_rescates_raw['MES_RESCATE'] = 'Sin Fecha'
+                
+                total_rescates = len(df_rescates_raw)
+                mes_actual_str = pd.Timestamp.today().strftime('%Y-%m')
+                rescates_este_mes = df_rescates_raw[df_rescates_raw['MES_RESCATE'] == mes_actual_str].shape[0] if not df_rescates_raw.empty else 0
+            
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    st.metric(label="Total Rescates en el Periodo", value=total_rescates)
+                with c2:
+                    st.metric(label="Rescates Este Mes", value=rescates_este_mes)
+                with c3:
+                    gestores_unicos = df_rescates_raw['USUARIO_GESTOR'].nunique() if 'USUARIO_GESTOR' in df_rescates_raw.columns else 0
+                    st.metric(label="Gestores Activos", value=gestores_unicos)
+                
+                st.markdown("---")
+                col_a, col_b = st.columns(2)
+            
+                with col_a:
+                    st.markdown("#### 🥇 Top Gestores")
+                    if 'USUARIO_GESTOR' in df_rescates_raw.columns:
+                        df_gestores = df_rescates_raw['USUARIO_GESTOR'].value_counts().reset_index()
+                        df_gestores.columns = ['USUARIO_GESTOR', 'CANTIDAD']
+                        fig_gestores = px.bar(df_gestores, x='CANTIDAD', y='USUARIO_GESTOR', orientation='h', color='CANTIDAD', color_continuous_scale="Teal", text='CANTIDAD')
+                        fig_gestores.update_traces(textposition='auto', marker_line_color='rgb(8,48,107)', marker_line_width=1.5, opacity=0.8)
+                        fig_gestores.update_layout(yaxis={'categoryorder':'total ascending'}, showlegend=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', margin=dict(l=0, r=0, t=30, b=0))
+                        st.plotly_chart(fig_gestores, width="stretch")
+            
+                with col_b:
+                    st.markdown("#### 🏥 Rescates por Centro")
+                    if 'NOMBRE_CENTRO' in df_rescates_raw.columns:
+                        df_centros = df_rescates_raw['NOMBRE_CENTRO'].value_counts().reset_index()
+                        df_centros.columns = ['NOMBRE_CENTRO', 'CANTIDAD']
+                        fig_centros = px.pie(df_centros, names='NOMBRE_CENTRO', values='CANTIDAD', hole=0.5, color_discrete_sequence=px.colors.qualitative.Pastel)
+                        fig_centros.update_traces(textposition='inside', textinfo='percent+label', pull=[0.05]*len(df_centros))
+                        fig_centros.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', showlegend=False, margin=dict(l=0, r=0, t=30, b=0))
+                        st.plotly_chart(fig_centros, width="stretch")
+            
+                st.markdown("#### 📈 Evolución Diaria de Rescates")
+                if not df_rescates_raw['FECHA_RESCATE_DT'].isna().all():
+                    df_rescates_raw['FECHA_DIA'] = df_rescates_raw['FECHA_RESCATE_DT'].dt.strftime('%d-%m-%Y')
+                    df_tiempo = df_rescates_raw.groupby('FECHA_DIA').size().reset_index(name='CANTIDAD')
+                    # Convert back to datetime just for sorting chronologically, then back to string
+                    df_tiempo['FECHA_SORT'] = pd.to_datetime(df_tiempo['FECHA_DIA'], format='%d-%m-%Y')
+                    df_tiempo = df_tiempo.sort_values('FECHA_SORT')
+                
+                    fig_tiempo = px.area(df_tiempo, x='FECHA_DIA', y='CANTIDAD', markers=True, text='CANTIDAD')
+                    fig_tiempo.update_traces(textposition="top center", line_color='#00A8E8', fillcolor='rgba(0, 168, 232, 0.2)', marker=dict(size=10, color="#FFB703", line=dict(width=2, color='white')))
+                    fig_tiempo.update_layout(xaxis_type='category', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', xaxis_title="Fecha", yaxis_title="Rescates", margin=dict(l=0, r=0, t=30, b=0))
+                    st.plotly_chart(fig_tiempo, width="stretch")
+                
+                with st.expander("📄 Ver Datos de Rescates Exitosos (Crudos)"):
+                    st.dataframe(df_rescates_raw, width='stretch')
+                
+            if not df_bajas_raw.empty:
+                st.markdown("#### 🚫 Bajas y Pacientes No Inscritos")
+                st.info("Pacientes que se acercaron al centro pero no pudieron ser inscritos en el per cápita. Estos pacientes ya han sido removidos de las brechas.")
+            
+                c1_b, c2_b = st.columns(2)
+                with c1_b:
+                    st.metric(label="Total Bajas Registradas", value=len(df_bajas_raw))
+                
+                with c2_b:
+                    if 'CATEGORIA' in df_bajas_raw.columns:
+                        df_cats = df_bajas_raw['CATEGORIA'].value_counts().reset_index()
+                        df_cats.columns = ['CATEGORIA', 'CANTIDAD']
+                        fig_cats = px.pie(df_cats, names='CATEGORIA', values='CANTIDAD', hole=0.4)
+                        fig_cats.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
+                        st.plotly_chart(fig_cats, width='stretch')
+                    
+                with st.expander("📄 Ver Datos de Bajas (Crudos)"):
+                    st.dataframe(df_bajas_raw, width='stretch')
 
-        #### 3. Plazos Anuales y Financiamiento
-        Para calcular cuánto dinero recibirá el municipio al año siguiente, hay plazos estrictos:
-        - **31 de Agosto:** Corte anual. La información en esta fecha calcula el decreto de financiamiento.
-        - **15 de Septiembre:** Plazo máximo para que los municipios presenten reclamos al Servicio de Salud por inscripciones objetadas.
-        - **10 de Octubre:** El Servicio de Salud resuelve los reclamos.
-        - **15 de Noviembre:** Publicación definitiva del listado de financiamiento.
+    if show_tab6:
+        with tab6:
+            st.markdown("### 📚 Manual Operativo de Inscripción Per Cápita FONASA")
+            st.info("Este manual detalla los procedimientos oficiales según la normativa del Fondo Nacional de Salud (FONASA).")
         
-        #### 4. Procedimientos de Excepción
-        **A. Liberación de Huella:**
-        Se autoriza saltar el paso biométrico si: el sistema falla repetidamente, hay impedimento físico (quemaduras, paciente postrado, falta de extremidades), o es un extranjero con RUN provisorio. Se llena el Anexo N°4 para autorización del Jefe de Sucursal.
+            st.markdown("""
+            #### 1. Marco Legal y Fundamentos del Modelo
+            El sistema de financiamiento Per Cápita de la Atención Primaria de Salud (APS) busca la equidad, eficiencia y transparencia en la asignación de recursos estatales.
+            - **Ley N° 19.378:** Define que los municipios recibirán un aporte estatal mensual determinado por la población inscrita validada.
+            - **Derecho a elección:** Los beneficiarios mayores de edad eligen libremente el centro de la Red Asistencial según su domicilio laboral o particular.
+            - **Negación de atención:** La falta de inscripción **en ningún caso** es causal legal para negar atención médica.
+            - **Pacientes No Beneficiarios (ISAPRES):** Si solicitan atención, son pacientes particulares. Los ingresos quedan para el CESFAM, pero **no generan inscripción Per Cápita**.
         
-        **B. Inscripción por Terceros:**
-        - **Sin poder:** Afiliado inscribe a sus cargas, conviviente civil, o si es Tramo A carente de recursos (inscribe a todo el grupo hogar).
-        - **Poder Simple:** Solo para adultos mayores postrados o impedidos físicos/mentales.
-        - **Poder Notarial:** Cualquier tercero mayor de edad con poder firmado ante notario.
+            #### 2. Reglas de Inscripción y Bloqueos (Regla del Año)
+            - **Sin Bloqueo:** Un beneficiario puede cambiarse de centro libremente si ha transcurrido **un año o más** desde su última inscripción.
+            - **Con Bloqueo (Menos de un año):** El sistema rechazará el cambio a menos que el paciente demuestre un cambio de domicilio (laboral o particular) presentando un **documento fidedigno**.
+            - **¿Qué es un documento fidedigno?** Certificado de residencia, contrato de trabajo, cuentas a nombre del paciente (luz, agua), certificado indígena. Se deben registrar: Entidad Emisora, Fecha, Número y Firmante.
+
+            #### 3. Plazos Anuales y Financiamiento
+            Para calcular cuánto dinero recibirá el municipio al año siguiente, hay plazos estrictos:
+            - **31 de Agosto:** Corte anual. La información en esta fecha calcula el decreto de financiamiento.
+            - **15 de Septiembre:** Plazo máximo para que los municipios presenten reclamos al Servicio de Salud por inscripciones objetadas.
+            - **10 de Octubre:** El Servicio de Salud resuelve los reclamos.
+            - **15 de Noviembre:** Publicación definitiva del listado de financiamiento.
         
-        **C. Extranjeros:**
-        - Con RUN Nacional: Inscripción normal.
-        - Con RUN Provisorio (Fonasa): Se pide autorización de "Liberación de huella".
-        - Sin RUN (Indocumentados/Visa en trámite): No se inscriben en el CESFAM. Se derivan a sucursal FONASA física para trámite de afiliación.
+            #### 4. Procedimientos de Excepción
+            **A. Liberación de Huella:**
+            Se autoriza saltar el paso biométrico si: el sistema falla repetidamente, hay impedimento físico (quemaduras, paciente postrado, falta de extremidades), o es un extranjero con RUN provisorio. Se llena el Anexo N°4 para autorización del Jefe de Sucursal.
         
-        #### 5. Glosario de Casos Especiales y Gratuidad Total
-        Hay pacientes que, aunque tengan ISAPRE, tienen derecho a atención gratuita en el sistema público (MAI) como "Otros Beneficiarios":
-        - **Condición PRAIS:** Programa de Reparación (DDHH).
-        - **Condición ANTUCO:** Familiares víctimas de Antuco.
-        - **PRI LONCOS:** Amparados por la CIDH (Caso Norín Catrimán y otros). Gratuidad al 100%.
-        - **Carencia de Recursos (Tramo A):** Quienes postulan por indigencia. Pueden inscribir a todo su grupo hogar sin poder notarial.
-        """)
+            **B. Inscripción por Terceros:**
+            - **Sin poder:** Afiliado inscribe a sus cargas, conviviente civil, o si es Tramo A carente de recursos (inscribe a todo el grupo hogar).
+            - **Poder Simple:** Solo para adultos mayores postrados o impedidos físicos/mentales.
+            - **Poder Notarial:** Cualquier tercero mayor de edad con poder firmado ante notario.
+        
+            **C. Extranjeros:**
+            - Con RUN Nacional: Inscripción normal.
+            - Con RUN Provisorio (Fonasa): Se pide autorización de "Liberación de huella".
+            - Sin RUN (Indocumentados/Visa en trámite): No se inscriben en el CESFAM. Se derivan a sucursal FONASA física para trámite de afiliación.
+        
+            #### 5. Glosario de Casos Especiales y Gratuidad Total
+            Hay pacientes que, aunque tengan ISAPRE, tienen derecho a atención gratuita en el sistema público (MAI) como "Otros Beneficiarios":
+            - **Condición PRAIS:** Programa de Reparación (DDHH).
+            - **Condición ANTUCO:** Familiares víctimas de Antuco.
+            - **PRI LONCOS:** Amparados por la CIDH (Caso Norín Catrimán y otros). Gratuidad al 100%.
+            - **Carencia de Recursos (Tramo A):** Quienes postulan por indigencia. Pueden inscribir a todo su grupo hogar sin poder notarial.
+            """)
 
 # --- FOOTER (REPLICADO EXACTO DE APP BASE) ---
 st.markdown("---")
