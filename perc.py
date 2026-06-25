@@ -951,7 +951,7 @@ if app_mode == "📊 Análisis Archivo Percápita":
 
     if archivos:
         try:
-            df_global, df_auth, df_fall = cargar_datos_cache_v2(archivos)
+            df_global, df_auth, df_fall, df_rech = cargar_datos_cache_v2(archivos)
         except Exception as e:
             st.error(f"Error al procesar los archivos: {e}")
             st.stop()
@@ -964,7 +964,7 @@ if app_mode == "📊 Análisis Archivo Percápita":
         cols_existentes = [c for c in columnas_sesion if c in df_auth.columns]
         st.session_state.df_autorizados = df_auth[cols_existentes]
 
-        tab1_p, tab2_p, tab3_p = st.tabs(['📈 Inscritos Percápita', '📉 Registro Fallecidos', '📊 Análisis de datos'])
+        tab1_p, tab2_p, tab3_p, tab4_p = st.tabs(['📈 Inscritos Percápita', '📉 Registro Fallecidos', '⛔ Rechazados Previsionales', '📊 Análisis de datos'])
 
         def obtener_anios_validos(df, col_anio):
             raw = df[col_anio].dropna()
@@ -973,6 +973,7 @@ if app_mode == "📊 Análisis Archivo Percápita":
 
         año_export_insc = obtener_anios_validos(df_auth, 'ANIO_CORTE')
         año_export_fall = obtener_anios_validos(df_fall, 'ANIO_CORTE')
+        año_export_rech = obtener_anios_validos(df_rech, 'ANIO_CORTE')
 
         with tab1_p:
             with st.container(border=True):
@@ -1079,10 +1080,33 @@ if app_mode == "📊 Análisis Archivo Percápita":
                         fig_f = px.bar(df_grouped_f, x='Año', y='Fallecidos', text_auto=True, color='Año')
                         fig_f.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
                         st.plotly_chart(fig_f, width='stretch', theme=None)
-                        st.download_button(label="Descargar Nómina Fallecidos", data=convert_df_to_csv(df_filtrado_f), file_name="Fallecidos.csv", mime="text/csv", width='stretch')
+                        st.markdown("#### Configuración de Exportación 📥")
+                        cols_fall = df_filtrado_f.columns.tolist()
+                        sel_cols_fall = st.multiselect("Columnas a exportar (Fallecidos):", options=cols_fall, default=cols_fall, key="cols_fall")
+                        if sel_cols_fall:
+                            st.download_button(label="Descargar Nómina Fallecidos", data=convert_df_to_csv(df_filtrado_f[sel_cols_fall]), file_name="Fallecidos.csv", mime="text/csv", width='stretch')
                 else: st.warning("Sin datos de fallecidos.")
 
         with tab3_p:
+            with st.container(border=True):
+                if año_export_rech:
+                    opcion_año_rech = st.select_slider('Seleccione rango de años 📆', options=año_export_rech, value=(min(año_export_rech), max(año_export_rech)), key='slider_rech') if len(año_export_rech)>=2 else (año_export_rech[0], año_export_rech[0])
+                    anio_inicio_r, anio_fin_r = opcion_año_rech
+                    if not df_rech.empty:
+                        df_filtrado_r = df_rech[(df_rech['ANIO_CORTE'] >= anio_inicio_r) & (df_rech['ANIO_CORTE'] <= anio_fin_r)]
+                        df_grouped_r = df_filtrado_r.groupby('ANIO_CORTE')['RUT'].count().reset_index()
+                        df_grouped_r.columns = ['Año', 'Rechazados']
+                        fig_r = px.bar(df_grouped_r, x='Año', y='Rechazados', text_auto=True, color='Año')
+                        fig_r.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
+                        st.plotly_chart(fig_r, width='stretch', theme=None)
+                        st.markdown("#### Configuración de Exportación 📥")
+                        cols_rech = df_filtrado_r.columns.tolist()
+                        sel_cols_rech = st.multiselect("Columnas a exportar (Rechazados):", options=cols_rech, default=cols_rech, key="cols_rech")
+                        if sel_cols_rech:
+                            st.download_button(label="Descargar Nómina Rechazados", data=convert_df_to_csv(df_filtrado_r[sel_cols_rech]), file_name="Rechazados_Previsionales.csv", mime="text/csv", width='stretch')
+                else: st.warning("Sin datos de rechazados previsionales.")
+
+        with tab4_p:
             st.subheader("Análisis estadístico detallado 📊")
             años_global = obtener_anios_validos(df_global, 'ANIO_CORTE')
             orden_meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]

@@ -486,15 +486,16 @@ def reporte_percapita(archivos):
 
         # FALLECIDOS
         if 'MOTIVO' in df_per.columns:
-            df_per_fall = df_per[df_per['MOTIVO'] == 'RECHAZADO FALLECIDO']
+            df_per_fall = df_per[df_per['MOTIVO'] == 'RECHAZADO FALLECIDO'].copy()
             df_per_fall.drop_duplicates(subset='RUT', inplace=True)
-            col_df = ["RUT", "ANIO_CORTE", "MES_CORTE"]
-            col_df = [c for c in col_df if c in df_per_fall.columns]
-            df_per_fall = df_per_fall[col_df]
+            
+            df_per_rech_prev = df_per[df_per['MOTIVO'] == 'RECHAZADO PREVISIONAL'].copy()
+            df_per_rech_prev.drop_duplicates(subset='RUT', inplace=True)
         else:
              df_per_fall = pd.DataFrame()
+             df_per_rech_prev = pd.DataFrame()
 
-    return df_per,df_per_auth,df_per_fall
+    return df_per, df_per_auth, df_per_fall, df_per_rech_prev
 
 
 def normaliza_direcc(df):
