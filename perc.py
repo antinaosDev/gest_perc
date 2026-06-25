@@ -2044,6 +2044,17 @@ else:
                                         
                                     row = [nombre, centro, rut_val, anio, mes, categoria, obs_final, fecha_rescate, usuario_gestor]
                                 
+                                # PREVENCION DE DUPLICADOS EN TIEMPO REAL
+                                col_ruts = ws_target.col_values(3)
+                                ruts_limpios = [normalize_rut(str(r)) for r in col_ruts]
+                                rut_clean_val = normalize_rut(rut_val)
+                                
+                                if rut_clean_val in ruts_limpios:
+                                    st.error(f"⚠️ ¡ALERTA! El paciente {rut_val} acaba de ser gestionado por otro funcionario. Actualizando base de datos...")
+                                    st.cache_data.clear()
+                                    time.sleep(3)
+                                    st.rerun()
+                                    
                                 ws_target.append_row(row)
                             
                                 # Logica de Auditoria
