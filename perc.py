@@ -483,7 +483,7 @@ if APP_CONFIG.get('rol_real') == 'PROGRAMADOR' and 'simulated_role' in st.sessio
 
 
 # AUDITORIA DE LOGIN (Se registra solo 1 vez por sesion)
-if APP_CONFIG.get('valido', False) and not st.session_state.get('auditoria_login_registrado', False):
+if APP_CONFIG.get('valido', False) and st.session_state.get('logged_in', False) and not st.session_state.get('auditoria_login_registrado', False):
     try:
         scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds_login = Credentials.from_service_account_info(APP_CONFIG['credenciales'], scopes=scope)
