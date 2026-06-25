@@ -129,6 +129,11 @@ def get_demographic_data(url_demographic, url_rescates, client):
                 dem_data['max_anio_percapita'] = int(max_anio)
                 dem_data['max_mes_percapita'] = int(max_mes)
                 
+                import calendar
+                ultimo_dia = calendar.monthrange(int(max_anio), int(max_mes))[1]
+                fecha_corte = pd.to_datetime(f"{int(max_anio)}-{int(max_mes):02d}-{ultimo_dia} 23:59:59")
+                dem_data['fecha_corte_oficial'] = fecha_corte
+                
                 # Filtrar ESTRICTAMENTE por el mes y año más reciente (el padrón oficial actual)
                 df_perca_reciente = df_perca[(df_perca['ANIO_NUM'] == max_anio) & (df_perca['MES_NUM'] == max_mes)].copy()
                 
@@ -136,6 +141,7 @@ def get_demographic_data(url_demographic, url_rescates, client):
                 df_perca_unique = df_perca_reciente.drop_duplicates(subset=['RUT_CLEAN']).copy()
                 df_perca_unique['ESTA_PERCAPITADO'] = "SI"
                 dem_data['percapita'] = df_perca_unique[['RUT_CLEAN', 'ESTA_PERCAPITADO']]
+                dem_data['ruts_padron'] = set(df_perca_unique['RUT_CLEAN'].tolist())
         except: pass
 
         # 3. Rescates Manuales desde el archivo externo
@@ -154,12 +160,34 @@ def get_demographic_data(url_demographic, url_rescates, client):
             
             if not df_rescates.empty and 'RUT' in df_rescates.columns:
                 df_rescates['RUT_CLEAN'] = df_rescates['RUT'].apply(normalize_rut)
-                df_rescates['ESTA_PERCAPITADO'] = "SI"
+                df_rescates['FECHA_RESCATE_DT'] = pd.to_datetime(df_rescates['FECHA_RESCATE'], errors='coerce')
                 
-                if not dem_data['percapita'].empty:
-                    dem_data['percapita'] = pd.concat([dem_data['percapita'], df_rescates[['RUT_CLEAN', 'ESTA_PERCAPITADO']]]).drop_duplicates(subset=['RUT_CLEAN'])
-                else:
-                    dem_data['percapita'] = df_rescates[['RUT_CLEAN', 'ESTA_PERCAPITADO']]
+                fecha_corte_oficial = dem_data.get('fecha_corte_oficial', pd.to_datetime('1900-01-01'))
+                ruts_padron = dem_data.get('ruts_padron', set())
+                
+                rescates_vigentes = []
+                fugas_recurrentes = []
+                
+                for _, row in df_rescates.iterrows():
+                    rut = row['RUT_CLEAN']
+                    dt_rescate = row['FECHA_RESCATE_DT']
+                    
+                    if pd.isna(dt_rescate) or dt_rescate > fecha_corte_oficial:
+                        rescates_vigentes.append(rut)
+                    else:
+                        if rut in ruts_padron:
+                            pass # Ya sobrevivio oficial
+                        else:
+                            fugas_recurrentes.append(rut)
+                            
+                dem_data['fugas_recurrentes'] = set(fugas_recurrentes)
+                df_rescates_validos = pd.DataFrame({'RUT_CLEAN': rescates_vigentes, 'ESTA_PERCAPITADO': 'SI'})
+                
+                if not df_rescates_validos.empty:
+                    if not dem_data['percapita'].empty:
+                        dem_data['percapita'] = pd.concat([dem_data['percapita'], df_rescates_validos]).drop_duplicates(subset=['RUT_CLEAN'])
+                    else:
+                        dem_data['percapita'] = df_rescates_validos
                     
             # 3.5 Bajas Manuales
             try:
@@ -170,12 +198,27 @@ def get_demographic_data(url_demographic, url_rescates, client):
                 
                 if not df_bajas.empty and 'RUT' in df_bajas.columns:
                     df_bajas['RUT_CLEAN'] = df_bajas['RUT'].apply(normalize_rut)
-                    df_bajas['ESTA_PERCAPITADO'] = "SI" # Trick to remove from pending
                     
-                    if not dem_data['percapita'].empty:
-                        dem_data['percapita'] = pd.concat([dem_data['percapita'], df_bajas[['RUT_CLEAN', 'ESTA_PERCAPITADO']]]).drop_duplicates(subset=['RUT_CLEAN'])
-                    else:
-                        dem_data['percapita'] = df_bajas[['RUT_CLEAN', 'ESTA_PERCAPITADO']]
+                    bajas_terminales = []
+                    bajas_alertas = []
+                    
+                    for _, row in df_bajas.iterrows():
+                        rut = row['RUT_CLEAN']
+                        cat = str(row.get('CATEGORIA', '')).upper()
+                        if 'FALLECIDO' in cat:
+                            bajas_terminales.append(rut)
+                        else:
+                            bajas_alertas.append(rut)
+                            
+                    dem_data['bajas_alertas'] = set(bajas_alertas)
+                    
+                    df_bajas_terminales = pd.DataFrame({'RUT_CLEAN': bajas_terminales, 'ESTA_PERCAPITADO': 'SI'})
+                    
+                    if not df_bajas_terminales.empty:
+                        if not dem_data['percapita'].empty:
+                            dem_data['percapita'] = pd.concat([dem_data['percapita'], df_bajas_terminales]).drop_duplicates(subset=['RUT_CLEAN'])
+                        else:
+                            dem_data['percapita'] = df_bajas_terminales
             except gspread.exceptions.WorksheetNotFound:
                 dem_data['bajas_crudas'] = pd.DataFrame()
 
@@ -308,15 +351,21 @@ def get_rescate_data(config):
                 df['ESTADO_PERCAPITA'] = df['ESTA_PERCAPITADO'].fillna("PENDIENTE INSCRIPCION")
                 df.loc[df['ESTA_PERCAPITADO'] == 'SI', 'ESTADO_PERCAPITA'] = 'INSCRITO'
             else:
-                df['ESTADO_PERCAPITA'] = 'Sin Base Percapita'
+                df['ESTADO_PERCAPITA'] = 'PENDIENTE INSCRIPCION'
+                
+            bajas_alertas = dem_info.get('bajas_alertas', set())
+            fugas_recurrentes = dem_info.get('fugas_recurrentes', set())
+            
+            df.loc[(df['ESTADO_PERCAPITA'] == 'PENDIENTE INSCRIPCION') & (df['RUT_CLEAN'].isin(bajas_alertas)), 'ESTADO_PERCAPITA'] = 'ALERTA RECAPTURA'
+            df.loc[(df['ESTADO_PERCAPITA'] == 'PENDIENTE INSCRIPCION') & (df['RUT_CLEAN'].isin(fugas_recurrentes)), 'ESTADO_PERCAPITA'] = 'FUGA RECURRENTE'
 
-        # Filtrar solo pendientes
-        df_rescate = df[df['ESTADO_PERCAPITA'] == "PENDIENTE INSCRIPCION"].copy()
+        # Filtrar solo pendientes, alertas y fugas
+        df_rescate = df[df['ESTADO_PERCAPITA'].isin(["PENDIENTE INSCRIPCION", "ALERTA RECAPTURA", "FUGA RECURRENTE"])].copy()
         
         # Seleccionar columnas útiles (SIN INFO CLÍNICA)
         # Se elimina EDAD_NUM de la visualización, se usa solo EDAD_ACTUAL
         cols_deseadas = ['RUT', 'RUT_CLEAN', 'NOMBRE_PACIENTE', 'TELEFONO', 'EDAD_ACTUAL', 'GENERO',
-                         'SECTOR', 'POLICLINICO', 'NOMBRE_PROFESIONAL', 'PROFESION', 'FECHA_AGENDADA', 'HORA_AGENDADA', 'MOTIVO_CONSULTA']
+                         'SECTOR', 'POLICLINICO', 'NOMBRE_PROFESIONAL', 'PROFESION', 'FECHA_AGENDADA', 'HORA_AGENDADA', 'MOTIVO_CONSULTA', 'ESTADO_PERCAPITA']
         cols_existentes = [c for c in cols_deseadas if c in df_rescate.columns]
         return df_rescate[cols_existentes], dem_info
     except Exception as e:
@@ -1128,6 +1177,10 @@ else:
     if prof_sel != "Todos" and 'NOMBRE_PROFESIONAL' in df_filtered.columns:
         df_filtered = df_filtered[df_filtered['NOMBRE_PROFESIONAL'] == prof_sel]
 
+    # Conteo de subestados
+    conteo_fugas = df_filtered[df_filtered['ESTADO_PERCAPITA'] == 'FUGA RECURRENTE']['RUT_CLEAN'].nunique() if 'ESTADO_PERCAPITA' in df_filtered.columns else 0
+    conteo_alertas = df_filtered[df_filtered['ESTADO_PERCAPITA'] == 'ALERTA RECAPTURA']['RUT_CLEAN'].nunique() if 'ESTADO_PERCAPITA' in df_filtered.columns else 0
+    
     # 1. KPIs Visuales
     c1, c2, c3 = st.columns(3)
     with c1:
@@ -1139,8 +1192,11 @@ else:
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 </div>
             </div>
-            <p class="kpi-label">Pacientes a Rescatar</p>
-            <p class="kpi-value">{df_filtered[rut_col].nunique()}</p>
+            <p class="kpi-label">Brecha a Gestionar</p>
+            <p class="kpi-value" style="margin-bottom: 5px;">{df_filtered[rut_col].nunique()}</p>
+            <p style="font-size:0.85rem; color:#888; margin-top:0px; font-weight:500;">
+                🔄 {conteo_fugas} Fugas Recurrentes | 🚨 {conteo_alertas} Alertas
+            </p>
         </div>""", unsafe_allow_html=True)
     with c2:
         sector_crit = df_filtered['SECTOR'].mode()[0] if not df_filtered.empty and 'SECTOR' in df_filtered.columns else "N/A"
@@ -1350,6 +1406,8 @@ else:
         cols_final_table = [c for c in df_sorted.columns if c not in ['EDAD_NUM_CHART', 'FECHA_HORA', 'FECHA_HORA_STR', 'RUT_CLEAN', 'LABEL_SELECT']]
         if 'TIPO_RESCATE' in cols_final_table:
             cols_final_table.insert(0, cols_final_table.pop(cols_final_table.index('TIPO_RESCATE')))
+        if 'ESTADO_PERCAPITA' in cols_final_table:
+            cols_final_table.insert(1, cols_final_table.pop(cols_final_table.index('ESTADO_PERCAPITA')))
 
         import io
         excel_buffer = io.BytesIO()
@@ -1424,6 +1482,7 @@ else:
             
         configuracion_columnas = {
             "TIPO_RESCATE": st.column_config.TextColumn("Tipo de Rescate", width="small"),
+            "ESTADO_PERCAPITA": st.column_config.TextColumn("Estado (Fugas)", width="medium"),
             "RUT": st.column_config.TextColumn("RUT", width="small"),
             "NOMBRE_PACIENTE": st.column_config.TextColumn("Nombre Paciente", width="medium"),
             "TELEFONO": st.column_config.TextColumn("Teléfono", width="small"),
