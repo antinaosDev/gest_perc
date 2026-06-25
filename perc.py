@@ -1366,7 +1366,7 @@ else:
 
     st.markdown("---")
     
-    with st.expander("👀 Ver Listado Rápido de Estados Críticos"):
+    with st.expander("📌 Listado Rápido de Pacientes en Estado Crítico"):
         st.markdown("<p style='font-size:0.9rem; color:#555;'>Resumen rápido de pacientes únicos en cada categoría especial para facilitar su identificación inmediata.</p>", unsafe_allow_html=True)
         estados_criticos = {
             'FUGA RECURRENTE': '🔄 Fugas Recurrentes',
@@ -1395,7 +1395,14 @@ else:
     st.markdown("---")
 
     # TABS PARA ORGANIZAR LA APP
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Análisis de Brechas", "📈 Dashboard Demográfico", "📋 Nómina de Pacientes (Fugas y Alertas)", "📝 Gestión de Rescates", "🏆 Métricas de Rescates"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "📊 Análisis de Brechas", 
+        "📈 Dashboard Demográfico", 
+        "📋 Nómina de Pacientes", 
+        "📝 Gestión de Rescates", 
+        "🏆 Métricas de Rescates",
+        "📚 Manual Operativo FONASA"
+    ])
 
     with tab1:
         st.markdown("### 📊 Análisis Estratégico y Financiero")
@@ -1989,6 +1996,52 @@ else:
                     
             with st.expander("📄 Ver Datos de Bajas (Crudos)"):
                 st.dataframe(df_bajas_raw, width='stretch')
+
+    with tab6:
+        st.markdown("### 📚 Manual Operativo de Inscripción Per Cápita FONASA")
+        st.info("Este manual detalla los procedimientos oficiales según la normativa del Fondo Nacional de Salud (FONASA).")
+        
+        st.markdown("""
+        #### 1. Marco Legal y Fundamentos del Modelo
+        El sistema de financiamiento Per Cápita de la Atención Primaria de Salud (APS) busca la equidad, eficiencia y transparencia en la asignación de recursos estatales.
+        - **Ley N° 19.378:** Define que los municipios recibirán un aporte estatal mensual determinado por la población inscrita validada.
+        - **Derecho a elección:** Los beneficiarios mayores de edad eligen libremente el centro de la Red Asistencial según su domicilio laboral o particular.
+        - **Negación de atención:** La falta de inscripción **en ningún caso** es causal legal para negar atención médica.
+        - **Pacientes No Beneficiarios (ISAPRES):** Si solicitan atención, son pacientes particulares. Los ingresos quedan para el CESFAM, pero **no generan inscripción Per Cápita**.
+        
+        #### 2. Reglas de Inscripción y Bloqueos (Regla del Año)
+        - **Sin Bloqueo:** Un beneficiario puede cambiarse de centro libremente si ha transcurrido **un año o más** desde su última inscripción.
+        - **Con Bloqueo (Menos de un año):** El sistema rechazará el cambio a menos que el paciente demuestre un cambio de domicilio (laboral o particular) presentando un **documento fidedigno**.
+        - **¿Qué es un documento fidedigno?** Certificado de residencia, contrato de trabajo, cuentas a nombre del paciente (luz, agua), certificado indígena. Se deben registrar: Entidad Emisora, Fecha, Número y Firmante.
+
+        #### 3. Plazos Anuales y Financiamiento
+        Para calcular cuánto dinero recibirá el municipio al año siguiente, hay plazos estrictos:
+        - **31 de Agosto:** Corte anual. La información en esta fecha calcula el decreto de financiamiento.
+        - **15 de Septiembre:** Plazo máximo para que los municipios presenten reclamos al Servicio de Salud por inscripciones objetadas.
+        - **10 de Octubre:** El Servicio de Salud resuelve los reclamos.
+        - **15 de Noviembre:** Publicación definitiva del listado de financiamiento.
+        
+        #### 4. Procedimientos de Excepción
+        **A. Liberación de Huella:**
+        Se autoriza saltar el paso biométrico si: el sistema falla repetidamente, hay impedimento físico (quemaduras, paciente postrado, falta de extremidades), o es un extranjero con RUN provisorio. Se llena el Anexo N°4 para autorización del Jefe de Sucursal.
+        
+        **B. Inscripción por Terceros:**
+        - **Sin poder:** Afiliado inscribe a sus cargas, conviviente civil, o si es Tramo A carente de recursos (inscribe a todo el grupo hogar).
+        - **Poder Simple:** Solo para adultos mayores postrados o impedidos físicos/mentales.
+        - **Poder Notarial:** Cualquier tercero mayor de edad con poder firmado ante notario.
+        
+        **C. Extranjeros:**
+        - Con RUN Nacional: Inscripción normal.
+        - Con RUN Provisorio (Fonasa): Se pide autorización de "Liberación de huella".
+        - Sin RUN (Indocumentados/Visa en trámite): No se inscriben en el CESFAM. Se derivan a sucursal FONASA física para trámite de afiliación.
+        
+        #### 5. Glosario de Casos Especiales y Gratuidad Total
+        Hay pacientes que, aunque tengan ISAPRE, tienen derecho a atención gratuita en el sistema público (MAI) como "Otros Beneficiarios":
+        - **Condición PRAIS:** Programa de Reparación (DDHH).
+        - **Condición ANTUCO:** Familiares víctimas de Antuco.
+        - **PRI LONCOS:** Amparados por la CIDH (Caso Norín Catrimán y otros). Gratuidad al 100%.
+        - **Carencia de Recursos (Tramo A):** Quienes postulan por indigencia. Pueden inscribir a todo su grupo hogar sin poder notarial.
+        """)
 
 # --- FOOTER (REPLICADO EXACTO DE APP BASE) ---
 st.markdown("---")
