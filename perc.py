@@ -30,7 +30,7 @@ st.set_page_config(
 )
 
 @st.cache_data(show_spinner="Procesando y consolidando archivos...")
-def cargar_datos_cache_v2(archivos_cargados):
+def cargar_datos_cache_v3(archivos_cargados):
     return reporte_percapita(archivos_cargados)
 
 @st.cache_data
@@ -951,7 +951,7 @@ if app_mode == "📊 Análisis Archivo Percápita":
 
     if archivos:
         try:
-            df_global, df_auth, df_fall, df_rech = cargar_datos_cache_v2(archivos)
+            df_global, df_auth, df_fall, df_rech = cargar_datos_cache_v3(archivos)
         except Exception as e:
             st.error(f"Error al procesar los archivos: {e}")
             st.stop()
