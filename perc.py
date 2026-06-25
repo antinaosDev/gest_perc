@@ -398,8 +398,24 @@ st.markdown("""
         background-color: var(--sidebar-bg) !important;
         border-right: none !important;
     }
-    section[data-testid="stSidebar"] * {
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3,
+    section[data-testid="stSidebar"] h4,
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] .stRadio label {
         color: #FFFFFF !important;
+    }
+    
+    /* Corregir texto blanco en fondo blanco de inputs dentro del sidebar */
+    section[data-testid="stSidebar"] [data-baseweb="select"] span,
+    section[data-testid="stSidebar"] input {
+        color: #2C3E50 !important;
+    }
+    section[data-testid="stSidebar"] .stExpander p,
+    section[data-testid="stSidebar"] .stExpander label {
+        color: #2C3E50 !important;
     }
 
     /* Pestañas (Tabs) */
@@ -1525,6 +1541,7 @@ else:
                     
                     categoria = st.selectbox("Categoría de Gestión*", [
                         "Inscrito Exitosamente", 
+                        "Presenta registro en plataforma Fonasa",
                         "Cambio de Domicilio", 
                         "Inscrito en Otro Centro", 
                         "Fallecido", 
@@ -1554,7 +1571,7 @@ else:
                             rol_usuario = APP_CONFIG.get('rol', 'SIN_ROL')
                             
                             # Logica de hoja destino
-                            target_sheet_name = "registro_rescates" if categoria == "Inscrito Exitosamente" else "bajas_percapita"
+                            target_sheet_name = "registro_rescates" if categoria in ["Inscrito Exitosamente", "Presenta registro en plataforma Fonasa"] else "bajas_percapita"
                             
                             try:
                                 ws_target = sheet_rescates.worksheet(target_sheet_name)
@@ -1673,7 +1690,7 @@ else:
                     df_gestores = df_rescates_raw['USUARIO_GESTOR'].value_counts().reset_index()
                     df_gestores.columns = ['USUARIO_GESTOR', 'CANTIDAD']
                     fig_gestores = px.bar(df_gestores, x='CANTIDAD', y='USUARIO_GESTOR', orientation='h', color='CANTIDAD', color_continuous_scale="Viridis", text='CANTIDAD')
-                    fig_gestores.update_layout(yaxis={'categoryorder':'total ascending'}, showlegend=False)
+                    fig_gestores.update_layout(yaxis={'categoryorder':'total ascending'}, showlegend=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
                     st.plotly_chart(fig_gestores, use_container_width=True)
             
             with col_b:
@@ -1682,6 +1699,7 @@ else:
                     df_centros = df_rescates_raw['NOMBRE_CENTRO'].value_counts().reset_index()
                     df_centros.columns = ['NOMBRE_CENTRO', 'CANTIDAD']
                     fig_centros = px.pie(df_centros, names='NOMBRE_CENTRO', values='CANTIDAD', hole=0.4, color_discrete_sequence=px.colors.qualitative.Pastel)
+                    fig_centros.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
                     st.plotly_chart(fig_centros, use_container_width=True)
             
             st.markdown("#### 📈 Evolución en el Tiempo")
@@ -1689,6 +1707,7 @@ else:
                 df_tiempo = df_rescates_raw.groupby('MES_RESCATE').size().reset_index(name='CANTIDAD')
                 fig_tiempo = px.line(df_tiempo, x='MES_RESCATE', y='CANTIDAD', markers=True, text='CANTIDAD', line_shape='spline')
                 fig_tiempo.update_traces(textposition="top center", line_color='#00A8E8', marker=dict(size=10, color="#FFB703"))
+                fig_tiempo.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
                 st.plotly_chart(fig_tiempo, use_container_width=True)
                 
             with st.expander("📄 Ver Datos de Rescates Exitosos (Crudos)"):
@@ -1707,6 +1726,7 @@ else:
                     df_cats = df_bajas_raw['CATEGORIA'].value_counts().reset_index()
                     df_cats.columns = ['CATEGORIA', 'CANTIDAD']
                     fig_cats = px.pie(df_cats, names='CATEGORIA', values='CANTIDAD', hole=0.4)
+                    fig_cats.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50')
                     st.plotly_chart(fig_cats, use_container_width=True)
                     
             with st.expander("📄 Ver Datos de Bajas (Crudos)"):
