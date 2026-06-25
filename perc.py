@@ -85,7 +85,7 @@ def normalize_rut(rut):
     if len(rut) < 2: return "INVALIDO"
     return rut
 
-@st.cache_data(ttl=600, show_spinner=False)
+@st.cache_data(ttl=60, show_spinner=False)
 def get_demographic_data(url_demographic, url_rescates, _client):
     """Carga bases secundarias (Sector y Percápita)."""
     dem_data = {'sector': pd.DataFrame(), 'percapita': pd.DataFrame()}
@@ -2101,6 +2101,10 @@ else:
                 filtro_anio = st.selectbox("Año de Evaluación", anios_disp, index=anios_disp.index(def_anio) if def_anio in anios_disp else 0)
             with c_f2:
                 filtro_mes = st.selectbox("Mes de Evaluación", meses_disp, index=meses_disp.index(def_mes_nombre) if def_mes_nombre in meses_disp else 0)
+            
+            if st.button("🔄 Sincronizar con Base de Datos"):
+                st.cache_data.clear()
+                st.rerun()
             
             if not df_rescates_raw.empty and 'ANIO_CORTE' in df_rescates_raw.columns and 'MES_CORTE' in df_rescates_raw.columns:
                 df_rescates_raw['ANIO_CORTE_NUM'] = pd.to_numeric(df_rescates_raw['ANIO_CORTE'], errors='coerce')
