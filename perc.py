@@ -1921,7 +1921,7 @@ else:
                     else:
                         st.info(f"ℹ️ **Estado de la Hora:** {status_rescate} - (Demanda espontánea o sin agendamiento formal).")
                     
-                    with st.form("form_rescate", clear_on_submit=True):
+                    if True: # Reemplazo de st.form para permitir actualización dinámica
                         c_f1, c_f2 = st.columns(2)
                         with c_f1:
                             nombre = st.text_input("Nombres", value=paciente_data['NOMBRE_PACIENTE'])
@@ -1971,7 +1971,7 @@ else:
                             st.markdown("</div>", unsafe_allow_html=True)
                         obs = st.text_area("Detalles Adicionales (Opcional)")
                     
-                        if st.form_submit_button("Confirmar Rescate/Gestión", type="primary", width='stretch'):
+                        if st.button("Confirmar Rescate/Gestión", type="primary", use_container_width=True):
                             # ===== GUARDAR EN GOOGLE SHEETS ======
                             try:
                                 url_rescates = st.secrets["URL_RESCATES"]
