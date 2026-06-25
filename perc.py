@@ -1534,7 +1534,10 @@ else:
                             b_raw = APP_CONFIG.get('datos', {}).get('bajas_crudas', pd.DataFrame())
                             rut_clean = row.get('RUT_CLEAN', '')
                             if not b_raw.empty and rut_clean != '':
-                                match_baja = b_raw[b_raw['RUT_CLEAN'] == rut_clean]
+                                if 'RUT_CLEAN' not in b_raw.columns and 'RUT' in b_raw.columns:
+                                    b_raw['RUT_CLEAN'] = b_raw['RUT'].apply(normalize_rut)
+                                if 'RUT_CLEAN' in b_raw.columns:
+                                    match_baja = b_raw[b_raw['RUT_CLEAN'] == rut_clean]
                                 if not match_baja.empty:
                                     ultimo_registro = match_baja.iloc[-1]
                                     cat = str(ultimo_registro.get('CATEGORIA', '')).upper()
