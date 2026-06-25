@@ -970,16 +970,34 @@ with st.sidebar:
                     else:
                         st.error("Debe ingresar Cuenta y Clave.")
                         
+        @st.cache_data(ttl=60, show_spinner=False)
+        def get_user_list():
+            try:
+                scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+                creds = Credentials.from_service_account_info(BOOTSTRAP_CREDS, scopes=scope)
+                client = gspread.authorize(creds)
+                ws = client.open_by_url(URL_ADMIN_MASTER).sheet1
+                data = ws.get_all_values()
+                if len(data) > 0:
+                    headers = [str(h).strip().upper() for h in data[0]]
+                    if "CUENTA" in headers:
+                        idx = headers.index("CUENTA")
+                        return [str(row[idx]).strip() for row in data[1:] if len(row)>idx and str(row[idx]).strip() != ""]
+            except: pass
+            return []
+            
+        lista_usuarios = get_user_list()
+        
         with st.expander("✏️ Editar Usuario"):
-            st.info("Para editar, ingrese la Cuenta exacta. Se actualizarán los demás campos ingresados.")
+            st.info("Para editar, seleccione la Cuenta. Se actualizarán los demás campos ingresados.")
             with st.form("form_editar_usuario"):
-                e_cuenta = st.text_input("Nombre de Cuenta a Editar (CUENTA)")
+                e_cuenta = st.selectbox("Nombre de Cuenta a Editar (CUENTA)", lista_usuarios if lista_usuarios else [""])
                 e_clave = st.text_input("Nueva Contraseña (CLAVE_PLATAFORMA) [Dejar vacío para no cambiar]")
                 e_rol = st.selectbox("Nuevo Rol", ['MANTENER ACTUAL', 'ADMINISTRADOR', 'JEFE_UNIDAD', 'PROF_UNIDAD', 'PROGRAMADOR'])
                 e_estado = st.selectbox("Estado de App", ['MANTENER ACTUAL', 'ACTIVO', 'INACTIVA', 'MANTENCION'])
                 
                 if st.form_submit_button("Actualizar Usuario"):
-                    if e_cuenta:
+                    if e_cuenta and e_cuenta.strip() != "":
                         try:
                             scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
                             creds = Credentials.from_service_account_info(BOOTSTRAP_CREDS, scopes=scope)
@@ -1017,6 +1035,44 @@ with st.sidebar:
                             st.error(f"Error editando usuario: {e}")
                     else:
                         st.error("Debe ingresar la Cuenta a editar.")
+                        
+        with st.expander("🗑️ Eliminar Usuario"):
+            st.warning("⚠️ Acción irreversible. Seleccione la cuenta a eliminar.")
+            with st.form("form_eliminar_usuario"):
+                d_cuenta = st.selectbox("Cuenta a Eliminar", lista_usuarios if lista_usuarios else [""], key="del_user")
+                
+                if st.form_submit_button("Eliminar Usuario"):
+                    if d_cuenta and d_cuenta.strip() != "":
+                        try:
+                            scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+                            creds = Credentials.from_service_account_info(BOOTSTRAP_CREDS, scopes=scope)
+                            client = gspread.authorize(creds)
+                            ws_admin = client.open_by_url(URL_ADMIN_MASTER).sheet1
+                            
+                            data_admin = ws_admin.get_all_values()
+                            headers = [str(h).strip().upper() for h in data_admin[0]]
+                            
+                            col_cuenta = headers.index("CUENTA") if "CUENTA" in headers else -1
+                            if col_cuenta == -1:
+                                st.error("No existe columna CUENTA en la base de datos.")
+                            else:
+                                row_to_delete = -1
+                                for i, row in enumerate(data_admin[1:], start=2):
+                                    row_padded = row + [''] * (len(headers) - len(row))
+                                    if str(row_padded[col_cuenta]).strip().upper() == d_cuenta.strip().upper():
+                                        row_to_delete = i
+                                        break
+                                        
+                                if row_to_delete > 0:
+                                    ws_admin.delete_rows(row_to_delete)
+                                    st.success(f"✅ Usuario '{d_cuenta}' eliminado exitosamente.")
+                                    get_user_list.clear()
+                                else:
+                                    st.error("No se encontró el usuario especificado.")
+                        except Exception as e:
+                            st.error(f"Error eliminando usuario: {e}")
+                    else:
+                        st.error("Debe seleccionar una Cuenta a eliminar.")
                         
     st.markdown("---")
     app_mode = st.radio("🛠️ Módulo Activo:", ["📋 Rescate de Pacientes", "📊 Análisis Archivo Percápita"])
