@@ -1404,7 +1404,7 @@ else:
     
     show_tab1 = rol_actual in ["PROGRAMADOR", "ADMINISTRADOR"]
     show_tab2 = rol_actual in ["PROGRAMADOR", "ADMINISTRADOR", "JEFE_UNIDAD"]
-    show_tab3 = rol_actual in ["PROGRAMADOR", "ADMINISTRADOR", "JEFE_UNIDAD"]
+    show_tab3 = rol_actual in ["PROGRAMADOR", "ADMINISTRADOR", "JEFE_UNIDAD", "PROF_UNIDAD"]
     show_tab4 = rol_actual in ["PROGRAMADOR", "ADMINISTRADOR", "JEFE_UNIDAD", "PROF_UNIDAD"]
     show_tab5 = rol_actual in ["PROGRAMADOR", "ADMINISTRADOR", "JEFE_UNIDAD"]
     show_tab6 = rol_actual in ["PROGRAMADOR", "ADMINISTRADOR", "JEFE_UNIDAD", "PROF_UNIDAD"]
