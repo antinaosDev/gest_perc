@@ -325,7 +325,14 @@ def load_app_configuration(account_id):
                     return str(val).strip()
             return default
 
-        if get_last_non_empty('ESTADO_APP').upper() != 'ACTIVO':
+        estado_actual = get_last_non_empty('ESTADO_APP').upper()
+        if estado_actual == 'MANTENCION':
+            config['mensaje'] = "La plataforma se encuentra en MANTENCIÓN. Por favor, intente más tarde."
+            return config
+        elif estado_actual == 'INACTIVA' or estado_actual == 'INACTIVO':
+            config['mensaje'] = "Su cuenta se encuentra INACTIVA. Contacte al administrador."
+            return config
+        elif estado_actual != 'ACTIVO':
             config['mensaje'] = "Cuenta desactivada."
             return config
 
@@ -960,6 +967,54 @@ with st.sidebar:
                     else:
                         st.error("Debe ingresar Cuenta y Clave.")
                         
+        with st.expander("✏️ Editar Usuario"):
+            st.info("Para editar, ingrese la Cuenta exacta. Se actualizarán los demás campos ingresados.")
+            with st.form("form_editar_usuario"):
+                e_cuenta = st.text_input("Nombre de Cuenta a Editar (CUENTA)")
+                e_clave = st.text_input("Nueva Contraseña (CLAVE_PLATAFORMA) [Dejar vacío para no cambiar]")
+                e_rol = st.selectbox("Nuevo Rol", ['MANTENER ACTUAL', 'ADMINISTRADOR', 'JEFE_UNIDAD', 'PROF_UNIDAD', 'PROGRAMADOR'])
+                e_estado = st.selectbox("Estado de App", ['MANTENER ACTUAL', 'ACTIVO', 'INACTIVA', 'MANTENCION'])
+                
+                if st.form_submit_button("Actualizar Usuario"):
+                    if e_cuenta:
+                        try:
+                            scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+                            creds = Credentials.from_service_account_info(BOOTSTRAP_CREDS, scopes=scope)
+                            client = gspread.authorize(creds)
+                            ws_admin = client.open_by_url(URL_ADMIN_MASTER).sheet1
+                            
+                            data_admin = ws_admin.get_all_values()
+                            headers = [str(h).strip().upper() for h in data_admin[0]]
+                            
+                            col_cuenta = headers.index("CUENTA") if "CUENTA" in headers else -1
+                            if col_cuenta == -1:
+                                st.error("No existe columna CUENTA en la base de datos.")
+                            else:
+                                row_to_update = -1
+                                for i, row in enumerate(data_admin[1:], start=2):
+                                    row_padded = row + [''] * (len(headers) - len(row))
+                                    if str(row_padded[col_cuenta]).strip().upper() == e_cuenta.strip().upper():
+                                        row_to_update = i
+                                        break
+                                        
+                                if row_to_update > 0:
+                                    if e_clave.strip() != "":
+                                        if "CLAVE_PLATAFORMA" in headers:
+                                            ws_admin.update_cell(row_to_update, headers.index("CLAVE_PLATAFORMA") + 1, e_clave.strip())
+                                    if e_rol != 'MANTENER ACTUAL':
+                                        if "ROL" in headers:
+                                            ws_admin.update_cell(row_to_update, headers.index("ROL") + 1, e_rol)
+                                    if e_estado != 'MANTENER ACTUAL':
+                                        if "ESTADO_APP" in headers:
+                                            ws_admin.update_cell(row_to_update, headers.index("ESTADO_APP") + 1, e_estado)
+                                    st.success(f"✅ Usuario '{e_cuenta}' actualizado exitosamente.")
+                                else:
+                                    st.error("No se encontró el usuario especificado.")
+                        except Exception as e:
+                            st.error(f"Error editando usuario: {e}")
+                    else:
+                        st.error("Debe ingresar la Cuenta a editar.")
+                        
     st.markdown("---")
     app_mode = st.radio("🛠️ Módulo Activo:", ["📋 Rescate de Pacientes", "📊 Análisis Archivo Percápita"])
     st.markdown("---")
@@ -1239,59 +1294,46 @@ try:
 except Exception:
     logo_url = APP_CONFIG['imagenes'].get('LOGO_NOTI', 'https://cdn-icons-png.flaticon.com/512/2966/2966327.png')
 
-st.markdown(f"""
-<div class="main-header">
-    <img src="{logo_url}" alt="Logo Institucional" style="width: 100px; height: auto; border-radius: 8px; background: white; padding: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-    <div class="header-text">
-        <h1>Centro de Salud Familiar Cholchol</h1>
-        <p>Tablero de Control Percápita - Seguimiento y Rescate de Pacientes</p>
+with st.expander("ℹ️ Información Institucional y Guía de Uso de la Plataforma", expanded=False):
+    st.markdown(f"""
+    <div class="main-header" style="margin-bottom: 15px;">
+        <img src="{logo_url}" alt="Logo Institucional" style="width: 100px; height: auto; border-radius: 8px; background: white; padding: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div class="header-text">
+            <h2 style="margin:0; padding:0; font-size: 1.5rem; color: #2C3E50;">Centro de Salud Familiar Cholchol</h2>
+            <p style="margin:0; color: #555;">Tablero de Control Percápita - Seguimiento y Rescate de Pacientes</p>
+        </div>
     </div>
-</div>
-""", unsafe_allow_html=True)
-
-# Carga de datos
-with st.spinner("🔄 Cruzando bases de datos en tiempo real..."):
-    df_rescate, dem_info = get_rescate_data(APP_CONFIG)
-    APP_CONFIG['datos']['rescates_crudos'] = dem_info.get('rescates_crudos', pd.DataFrame())
-    APP_CONFIG['datos']['bajas_crudas'] = dem_info.get('bajas_crudas', pd.DataFrame())
-
-anio_eval = dem_info.get('max_anio_percapita', 'N/A')
-mes_num = dem_info.get('max_mes_percapita', 0)
-mes_eval = MESES_ES.get(mes_num, 'N/A')
-
-st.markdown(f"""
-<div style="background-color: #E8F4F8; border-left: 4px solid #00A8E8; padding: 10px 15px; margin-bottom: 20px; border-radius: 4px;">
-    <p style="margin: 0; color: #2C3E50; font-weight: bold;">
-        📅 Padrón Percápita Evaluado: {mes_eval} {anio_eval}
-    </p>
-    <p style="margin: 0; color: #555; font-size: 0.9em;">
-        El cálculo de brechas se realiza cruzando las atenciones contra los inscritos oficiales de este corte. (El sistema utiliza el último día del mes evaluado como límite cronológico).
-    </p>
-</div>
-""", unsafe_allow_html=True)
-
-# Descripción de la Plataforma
-st.markdown("""
-<div class="info-card">
-    <h4 style="margin-top:0; color: #2C3E50;">ℹ️ Acerca de esta Plataforma</h4>
-    <p style="color: #555; font-size: 1rem; line-height: 1.5; margin-bottom: 0;">
-        Este sistema permite monitorear en tiempo real a los pacientes que han sido atendidos en el establecimiento pero que 
-        <strong>no figuran inscritos en la base de datos Percápita del corte actual</strong>. Utilice esta herramienta para identificar 
-        oportunidades de rescate, coordinar con los profesionales y asegurar el correcto registro de la población a cargo.
-    </p>
-</div>
-<div class="info-card" style="margin-top: 15px; border-left: 4px solid #FB8500;">
-    <h4 style="margin-top:0; color: #2C3E50;">⚠️ Guía de Estados de Pacientes</h4>
-    <ul style="color: #555; font-size: 0.95rem; line-height: 1.5; margin-bottom: 0; padding-left: 20px;">
-        <li><strong>Pendiente Inscripción:</strong> Pacientes nuevos que no aparecen en el padrón actual.</li>
-        <li><strong>Alerta Recaptura (🚨):</strong> Pacientes que inscribiste/rescataste en el pasado, pero que de manera anómala <strong>volvieron a desaparecer</strong> en el padrón actual. Es crítico volver a contactarlos porque la inscripción debía durar 1 año.</li>
-        <li><strong>Fuga Recurrente (🔄):</strong> Pacientes que habías dado de baja (Ej: "Rechaza inscripción"), pero que <strong>acumulan 3 o más atenciones en el año en curso</strong>. Aparecen para que intentes recapturarlos aprovechando su alta concurrencia.</li>
-        <li><strong>Captura Potencial (🟢):</strong> Pacientes inscritos en otro centro que ya cumplieron su bloqueo legal de 1 año y que acumulan 3 o más atenciones. ¡Es el momento legal para capturarlos! <em>(Nota: Si su año aún no se cumple, recuérdeles traer un certificado de domicilio laboral o particular para romper el candado)</em>.</li>
-        <li><strong>Rechazo Previsional (⚠️):</strong> Pacientes rechazados por cruces de Isapre o carencias. Gestionar bloqueos presenciales, o si son Isapres, verificar si se pueden capturar tras cambio de previsión.</li>
-    </ul>
-    <p style="color: #555; font-size: 0.9rem; margin-top: 10px; margin-bottom: 0;"><em>👉 Puedes identificar qué tipo de problema tiene cada paciente mirando la columna <strong>"Estado (Fugas)"</strong> en la tabla de la pestaña "Nómina Estratégica".</em></p>
-</div>
-""", unsafe_allow_html=True)
+    
+    <div style="background-color: #E8F4F8; border-left: 4px solid #00A8E8; padding: 10px 15px; margin-bottom: 20px; border-radius: 4px;">
+        <p style="margin: 0; color: #2C3E50; font-weight: bold;">
+            📅 Padrón Percápita Evaluado: {mes_eval} {anio_eval}
+        </p>
+        <p style="margin: 0; color: #555; font-size: 0.9em;">
+            El cálculo de brechas se realiza cruzando las atenciones contra los inscritos oficiales de este corte. (El sistema utiliza el último día del mes evaluado como límite cronológico).
+        </p>
+    </div>
+    
+    <div class="info-card">
+        <h4 style="margin-top:0; color: #2C3E50;">ℹ️ Acerca de esta Plataforma</h4>
+        <p style="color: #555; font-size: 1rem; line-height: 1.5; margin-bottom: 0;">
+            Este sistema permite monitorear en tiempo real a los pacientes que han sido atendidos en el establecimiento pero que 
+            <strong>no figuran inscritos en la base de datos Percápita del corte actual</strong>. Utilice esta herramienta para identificar 
+            oportunidades de rescate, coordinar con los profesionales y asegurar el correcto registro de la población a cargo.
+        </p>
+    </div>
+    
+    <div class="info-card" style="margin-top: 15px; border-left: 4px solid #FB8500;">
+        <h4 style="margin-top:0; color: #2C3E50;">⚠️ Guía de Estados de Pacientes</h4>
+        <ul style="color: #555; font-size: 0.95rem; line-height: 1.5; margin-bottom: 0; padding-left: 20px;">
+            <li><strong>Pendiente Inscripción:</strong> Pacientes nuevos que no aparecen en el padrón actual.</li>
+            <li><strong>Alerta Recaptura (🚨):</strong> Pacientes que inscribiste/rescataste en el pasado, pero que de manera anómala <strong>volvieron a desaparecer</strong> en el padrón actual. Es crítico volver a contactarlos porque la inscripción debía durar 1 año.</li>
+            <li><strong>Fuga Recurrente (🔄):</strong> Pacientes que habías dado de baja (Ej: "Rechaza inscripción"), pero que <strong>acumulan 3 o más atenciones en el año en curso</strong>. Aparecen para que intentes recapturarlos aprovechando su alta concurrencia.</li>
+            <li><strong>Captura Potencial (🟢):</strong> Pacientes inscritos en otro centro que ya cumplieron su bloqueo legal de 1 año y que acumulan 3 o más atenciones. Aparecen sugeridos como prioridad porque el sistema detecta que están habilitados normativamente para ser inscritos si traen su comprobante de domicilio.</li>
+            <li><strong>Rechazo Previsional (⚠️):</strong> Pacientes rechazados por cruces de Isapre o carencias. Gestionar bloqueos presenciales, o si son Isapres, verificar si se pueden capturar tras cambio de previsión.</li>
+        </ul>
+        <p style="color: #555; font-size: 0.9rem; margin-top: 10px; margin-bottom: 0;"><em>👉 Puedes identificar qué tipo de problema tiene cada paciente mirando la columna <strong>"Estado (Fugas)"</strong> en la tabla de la pestaña "Nómina Estratégica".</em></p>
+    </div>
+    """, unsafe_allow_html=True)
 
 if df_rescate.empty:
     st.balloons()
