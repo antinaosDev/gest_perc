@@ -2044,21 +2044,33 @@ else:
                                         
                                     row = [nombre, centro, rut_val, anio, mes, categoria, obs_final, fecha_rescate, usuario_gestor]
                                 
-                                # PREVENCION DE DUPLICADOS EN TIEMPO REAL (En ambas hojas)
-                                ruts_bloqueados = []
+                                # PREVENCION DE DUPLICADOS EN TIEMPO REAL Y UPSERT (En ambas hojas)
+                                rut_clean_val = normalize_rut(rut_val)
+                                fecha_ahora = datetime.now(stgo_tz)
+                                
                                 for sheet_name in ["registro_rescates", "bajas_percapita"]:
                                     try:
                                         ws_temp = sheet_rescates.worksheet(sheet_name)
-                                        ruts_bloqueados.extend([normalize_rut(str(r)) for r in ws_temp.col_values(3)])
+                                        ruts_sheet = ws_temp.col_values(3)
+                                        fechas_sheet = ws_temp.col_values(8)
+                                        
+                                        # Recorremos de atras hacia adelante para poder borrar filas sin alterar el indice
+                                        for idx in range(len(ruts_sheet)-1, -1, -1):
+                                            if normalize_rut(str(ruts_sheet[idx])) == rut_clean_val:
+                                                fecha_reg_str = fechas_sheet[idx] if idx < len(fechas_sheet) else ""
+                                                try:
+                                                    fecha_reg = datetime.strptime(fecha_reg_str, "%Y-%m-%d %H:%M:%S")
+                                                    fecha_reg = stgo_tz.localize(fecha_reg)
+                                                    if (fecha_ahora - fecha_reg).total_seconds() < 3600:
+                                                        st.error(f"⚠️ ¡ALERTA! El paciente {rut_val} acaba de ser gestionado por otro funcionario hace un momento. Actualizando base de datos...")
+                                                        st.cache_data.clear()
+                                                        time.sleep(3)
+                                                        st.rerun()
+                                                except: pass
+                                                
+                                                # Si pasamos aqui, es una actualizacion de un registro antiguo. Borramos el antiguo.
+                                                ws_temp.delete_row(idx + 1)
                                     except: pass
-                                
-                                rut_clean_val = normalize_rut(rut_val)
-                                
-                                if rut_clean_val in ruts_bloqueados:
-                                    st.error(f"⚠️ ¡ALERTA! El paciente {rut_val} acaba de ser gestionado por otro funcionario en otra sesión. Actualizando base de datos...")
-                                    st.cache_data.clear()
-                                    time.sleep(3)
-                                    st.rerun()
                                     
                                 ws_target.append_row(row)
                             
