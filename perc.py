@@ -1077,6 +1077,10 @@ with st.sidebar:
     st.markdown("---")
     app_mode = st.radio("🛠️ Módulo Activo:", ["📋 Rescate de Pacientes", "📊 Análisis Archivo Percápita"])
     st.markdown("---")
+    
+    if st.button("🚪 Cerrar Sesión", key="btn_logout", width='stretch'):
+        st.session_state.clear()
+        st.rerun()
 
     st.markdown("### 🏥 Panel Institucional")
     st.success("🟢 Sistema Online y Sincronizado")
