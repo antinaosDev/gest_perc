@@ -144,6 +144,33 @@ def get_demographic_data(url_demographic, url_rescates, _client):
                 dem_data['ruts_padron'] = set(df_perca_unique['RUT_CLEAN'].tolist())
         except: pass
 
+        # 2.5 Fallecidos Historicos (fall.)
+        try:
+            ws_fall_hist = sheet_dem.worksheet("fall.")
+            data_fall_hist = ws_fall_hist.get_all_records()
+            df_fall_hist = pd.DataFrame(data_fall_hist)
+            if not df_fall_hist.empty and 'RUT' in df_fall_hist.columns:
+                df_fall_hist['RUT_CLEAN'] = df_fall_hist['RUT'].apply(normalize_rut)
+                dem_data['fallecidos_historicos'] = set(df_fall_hist['RUT_CLEAN'].tolist())
+        except: pass
+
+        # 2.6 Rechazos Previsionales (rechazo_prev)
+        try:
+            ws_rechazo_prev = sheet_dem.worksheet("rechazo_prev")
+            data_rechazo_prev = ws_rechazo_prev.get_all_records()
+            df_rechazo_prev = pd.DataFrame(data_rechazo_prev)
+            if not df_rechazo_prev.empty and 'RUT' in df_rechazo_prev.columns:
+                df_rechazo_prev['RUT_CLEAN'] = df_rechazo_prev['RUT'].apply(normalize_rut)
+                df_rechazo_prev['ANIO_NUM'] = pd.to_numeric(df_rechazo_prev['ANIO_CORTE'], errors='coerce').fillna(0)
+                df_rechazo_prev['MES_NUM'] = df_rechazo_prev['MES_CORTE'].apply(mes_to_num)
+                
+                max_anio_r = df_rechazo_prev['ANIO_NUM'].max()
+                max_mes_r = df_rechazo_prev[df_rechazo_prev['ANIO_NUM'] == max_anio_r]['MES_NUM'].max()
+                df_rechazo_reciente = df_rechazo_prev[(df_rechazo_prev['ANIO_NUM'] == max_anio_r) & (df_rechazo_prev['MES_NUM'] == max_mes_r)]
+                
+                dem_data['rechazos_previsionales'] = set(df_rechazo_reciente['RUT_CLEAN'].tolist())
+        except: pass
+
         # 3. Rescates Manuales desde el archivo externo
         try:
             if not url_rescates or len(url_rescates) < 10:
@@ -384,10 +411,15 @@ def get_rescate_data(config):
             alertas_recaptura = dem_info.get('alertas_recaptura', set())
             fugas_recurrentes = dem_info.get('fugas_recurrentes', set())
             capturas_potenciales = dem_info.get('capturas_potenciales', set())
+            fallecidos_historicos = dem_info.get('fallecidos_historicos', set())
+            rechazos_previsionales = dem_info.get('rechazos_previsionales', set())
             
             df.loc[(df['ESTADO_PERCAPITA'] == 'PENDIENTE INSCRIPCION') & (df['RUT_CLEAN'].isin(alertas_recaptura)), 'ESTADO_PERCAPITA'] = 'ALERTA RECAPTURA'
             df.loc[(df['ESTADO_PERCAPITA'] == 'PENDIENTE INSCRIPCION') & (df['RUT_CLEAN'].isin(capturas_potenciales)), 'ESTADO_PERCAPITA'] = 'CAPTURA POTENCIAL TEMP'
             df.loc[(df['ESTADO_PERCAPITA'] == 'PENDIENTE INSCRIPCION') & (df['RUT_CLEAN'].isin(fugas_recurrentes)), 'ESTADO_PERCAPITA'] = 'FUGA RECURRENTE TEMP'
+            
+            df.loc[(df['ESTADO_PERCAPITA'] == 'PENDIENTE INSCRIPCION') & (df['RUT_CLEAN'].isin(rechazos_previsionales)), 'ESTADO_PERCAPITA'] = 'RECHAZO PREVISIONAL'
+            df.loc[(df['RUT_CLEAN'].isin(fallecidos_historicos)), 'ESTADO_PERCAPITA'] = 'FALLECIDO HISTORICO'
             
             if 'FECHA_AGENDADA' in df.columns:
                 df['TEMP_ANIO_AGENDA'] = pd.to_datetime(df['FECHA_AGENDADA'].astype(str).str.split(' ').str[0], errors='coerce', dayfirst=True).dt.year
@@ -406,8 +438,8 @@ def get_rescate_data(config):
                 df.loc[df['ESTADO_PERCAPITA'] == 'FUGA RECURRENTE TEMP', 'ESTADO_PERCAPITA'] = 'FUGA RECURRENTE'
                 df.loc[df['ESTADO_PERCAPITA'] == 'CAPTURA POTENCIAL TEMP', 'ESTADO_PERCAPITA'] = 'CAPTURA POTENCIAL'
 
-        # Filtrar solo pendientes, alertas, fugas y capturas
-        df_rescate = df[df['ESTADO_PERCAPITA'].isin(["PENDIENTE INSCRIPCION", "ALERTA RECAPTURA", "FUGA RECURRENTE", "CAPTURA POTENCIAL"])].copy()
+        # Filtrar solo pendientes, alertas, fugas, capturas y rechazos
+        df_rescate = df[df['ESTADO_PERCAPITA'].isin(["PENDIENTE INSCRIPCION", "ALERTA RECAPTURA", "FUGA RECURRENTE", "CAPTURA POTENCIAL", "RECHAZO PREVISIONAL"])].copy()
         
         # Seleccionar columnas útiles (SIN INFO CLÍNICA)
         # Se elimina EDAD_NUM de la visualización, se usa solo EDAD_ACTUAL
@@ -1238,6 +1270,7 @@ st.markdown("""
         <li><strong>Alerta Recaptura (🚨):</strong> Pacientes que inscribiste/rescataste en el pasado, pero que de manera anómala <strong>volvieron a desaparecer</strong> en el padrón actual. Es crítico volver a contactarlos porque la inscripción debía durar 1 año.</li>
         <li><strong>Fuga Recurrente (🔄):</strong> Pacientes que habías dado de baja (Ej: "Rechaza inscripción"), pero que <strong>acumulan 3 o más atenciones en el año en curso</strong>. Aparecen para que intentes recapturarlos aprovechando su alta concurrencia.</li>
         <li><strong>Captura Potencial (🟢):</strong> Pacientes inscritos en otro centro que ya cumplieron su bloqueo legal de 1 año y que acumulan 3 o más atenciones. ¡Es el momento legal para capturarlos! <em>(Nota: Si su año aún no se cumple, recuérdeles traer un certificado de domicilio laboral o particular para romper el candado)</em>.</li>
+        <li><strong>Rechazo Previsional (⚠️):</strong> Pacientes rechazados por cruces de Isapre o carencias. Gestionar bloqueos presenciales, o si son Isapres, verificar si se pueden capturar tras cambio de previsión.</li>
     </ul>
     <p style="color: #555; font-size: 0.9rem; margin-top: 10px; margin-bottom: 0;"><em>👉 Puedes identificar qué tipo de problema tiene cada paciente mirando la columna <strong>"Estado (Fugas)"</strong> en la tabla de la pestaña "Nómina Estratégica".</em></p>
 </div>
@@ -1274,6 +1307,7 @@ else:
     conteo_fugas = df_filtered[df_filtered['ESTADO_PERCAPITA'] == 'FUGA RECURRENTE']['RUT_CLEAN'].nunique() if 'ESTADO_PERCAPITA' in df_filtered.columns else 0
     conteo_alertas = df_filtered[df_filtered['ESTADO_PERCAPITA'] == 'ALERTA RECAPTURA']['RUT_CLEAN'].nunique() if 'ESTADO_PERCAPITA' in df_filtered.columns else 0
     conteo_capturas = df_filtered[df_filtered['ESTADO_PERCAPITA'] == 'CAPTURA POTENCIAL']['RUT_CLEAN'].nunique() if 'ESTADO_PERCAPITA' in df_filtered.columns else 0
+    conteo_rechazos = df_filtered[df_filtered['ESTADO_PERCAPITA'] == 'RECHAZO PREVISIONAL']['RUT_CLEAN'].nunique() if 'ESTADO_PERCAPITA' in df_filtered.columns else 0
     
     # 1. KPIs Visuales
     c1, c2, c3 = st.columns(3)
@@ -1288,8 +1322,8 @@ else:
             </div>
             <p class="kpi-label">Brecha a Gestionar</p>
             <p class="kpi-value" style="margin-bottom: 5px;">{df_filtered[rut_col].nunique()}</p>
-            <p style="font-size:0.8rem; color:#888; margin-top:0px; font-weight:500;">
-                🔄 {conteo_fugas} Fugas | 🚨 {conteo_alertas} Alertas | 🟢 {conteo_capturas} Capturas
+            <p style="font-size:0.75rem; color:#888; margin-top:0px; font-weight:500;">
+                🔄 {conteo_fugas} Fugas | 🚨 {conteo_alertas} Alertas | 🟢 {conteo_capturas} Capturas | ⚠️ {conteo_rechazos} Rechazos
             </p>
         </div>""", unsafe_allow_html=True)
     with c2:
