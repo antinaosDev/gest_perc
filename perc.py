@@ -166,7 +166,7 @@ def get_demographic_data(url_demographic, url_rescates, client):
                 ruts_padron = dem_data.get('ruts_padron', set())
                 
                 rescates_vigentes = []
-                fugas_recurrentes = []
+                alertas_recaptura = []
                 
                 for _, row in df_rescates.iterrows():
                     rut = row['RUT_CLEAN']
@@ -178,9 +178,9 @@ def get_demographic_data(url_demographic, url_rescates, client):
                         if rut in ruts_padron:
                             pass # Ya sobrevivio oficial
                         else:
-                            fugas_recurrentes.append(rut)
+                            alertas_recaptura.append(rut)
                             
-                dem_data['fugas_recurrentes'] = set(fugas_recurrentes)
+                dem_data['alertas_recaptura'] = set(alertas_recaptura)
                 df_rescates_validos = pd.DataFrame({'RUT_CLEAN': rescates_vigentes, 'ESTA_PERCAPITADO': 'SI'})
                 
                 if not df_rescates_validos.empty:
@@ -200,7 +200,7 @@ def get_demographic_data(url_demographic, url_rescates, client):
                     df_bajas['RUT_CLEAN'] = df_bajas['RUT'].apply(normalize_rut)
                     
                     bajas_terminales = []
-                    bajas_alertas = []
+                    fugas_recurrentes = []
                     
                     for _, row in df_bajas.iterrows():
                         rut = row['RUT_CLEAN']
@@ -208,9 +208,9 @@ def get_demographic_data(url_demographic, url_rescates, client):
                         if 'FALLECIDO' in cat:
                             bajas_terminales.append(rut)
                         else:
-                            bajas_alertas.append(rut)
+                            fugas_recurrentes.append(rut)
                             
-                    dem_data['bajas_alertas'] = set(bajas_alertas)
+                    dem_data['fugas_recurrentes'] = set(fugas_recurrentes)
                     
                     df_bajas_terminales = pd.DataFrame({'RUT_CLEAN': bajas_terminales, 'ESTA_PERCAPITADO': 'SI'})
                     
@@ -353,11 +353,23 @@ def get_rescate_data(config):
             else:
                 df['ESTADO_PERCAPITA'] = 'PENDIENTE INSCRIPCION'
                 
-            bajas_alertas = dem_info.get('bajas_alertas', set())
+            alertas_recaptura = dem_info.get('alertas_recaptura', set())
             fugas_recurrentes = dem_info.get('fugas_recurrentes', set())
             
-            df.loc[(df['ESTADO_PERCAPITA'] == 'PENDIENTE INSCRIPCION') & (df['RUT_CLEAN'].isin(bajas_alertas)), 'ESTADO_PERCAPITA'] = 'ALERTA RECAPTURA'
-            df.loc[(df['ESTADO_PERCAPITA'] == 'PENDIENTE INSCRIPCION') & (df['RUT_CLEAN'].isin(fugas_recurrentes)), 'ESTADO_PERCAPITA'] = 'FUGA RECURRENTE'
+            df.loc[(df['ESTADO_PERCAPITA'] == 'PENDIENTE INSCRIPCION') & (df['RUT_CLEAN'].isin(alertas_recaptura)), 'ESTADO_PERCAPITA'] = 'ALERTA RECAPTURA'
+            
+            df.loc[(df['ESTADO_PERCAPITA'] == 'PENDIENTE INSCRIPCION') & (df['RUT_CLEAN'].isin(fugas_recurrentes)), 'ESTADO_PERCAPITA'] = 'FUGA RECURRENTE TEMP'
+            
+            if 'FECHA_AGENDADA' in df.columns:
+                df['TEMP_ANIO_AGENDA'] = pd.to_datetime(df['FECHA_AGENDADA'].astype(str).str.split(' ').str[0], errors='coerce', dayfirst=True).dt.year
+                max_anio_eval = dem_info.get('max_anio_percapita', datetime.now().year)
+                
+                idx_fuga = (df['ESTADO_PERCAPITA'] == 'FUGA RECURRENTE TEMP') & (df['TEMP_ANIO_AGENDA'] == max_anio_eval)
+                df.loc[idx_fuga, 'ESTADO_PERCAPITA'] = 'FUGA RECURRENTE'
+                
+                df.loc[df['ESTADO_PERCAPITA'] == 'FUGA RECURRENTE TEMP', 'ESTADO_PERCAPITA'] = 'BAJA NO RECURRENTE'
+            else:
+                df.loc[df['ESTADO_PERCAPITA'] == 'FUGA RECURRENTE TEMP', 'ESTADO_PERCAPITA'] = 'FUGA RECURRENTE'
 
         # Filtrar solo pendientes, alertas y fugas
         df_rescate = df[df['ESTADO_PERCAPITA'].isin(["PENDIENTE INSCRIPCION", "ALERTA RECAPTURA", "FUGA RECURRENTE"])].copy()
@@ -1152,8 +1164,8 @@ st.markdown("""
     <h4 style="margin-top:0; color: #2C3E50;">⚠️ Guía de Estados de Pacientes</h4>
     <ul style="color: #555; font-size: 0.95rem; line-height: 1.5; margin-bottom: 0; padding-left: 20px;">
         <li><strong>Pendiente Inscripción:</strong> Pacientes nuevos que no aparecen en el padrón actual.</li>
-        <li><strong>Fuga Recurrente (🔄):</strong> Pacientes que tú rescataste y categorizaste en meses anteriores, pero que <strong>volvieron a desaparecer</strong> en el padrón actual (Ej: Su inscripción rebotó, o se cambiaron a otro centro recientemente). Es crítico volver a contactarlos.</li>
-        <li><strong>Alerta Recaptura (🚨):</strong> Pacientes que habías dado de baja (Ej: "Rechaza inscripción"), pero que <strong>siguen agendando horas y atendiéndose en tu CESFAM</strong> hoy en día. Aparecen para que intentes recapturarlos aprovechando su nueva visita. (Los fallecidos se ocultan permanentemente).</li>
+        <li><strong>Alerta Recaptura (🚨):</strong> Pacientes que inscribiste/rescataste en el pasado, pero que de manera anómala <strong>volvieron a desaparecer</strong> en el padrón actual. Es crítico volver a contactarlos porque la inscripción debía durar 1 año.</li>
+        <li><strong>Fuga Recurrente (🔄):</strong> Pacientes que habías dado de baja (Ej: "Rechaza inscripción"), pero que <strong>siguen agendando horas en el año en curso</strong>. Aparecen para que intentes recapturarlos aprovechando su alta concurrencia.</li>
     </ul>
     <p style="color: #555; font-size: 0.9rem; margin-top: 10px; margin-bottom: 0;"><em>👉 Puedes identificar qué tipo de problema tiene cada paciente mirando la columna <strong>"Estado (Fugas)"</strong> en la tabla de la pestaña "Nómina Estratégica".</em></p>
 </div>
@@ -1608,7 +1620,8 @@ else:
                         mes = st.selectbox("Mes de Corte", list(meses_dict.values()), index=int(idx_mes))
                     
                     categoria = st.selectbox("Categoría de Gestión*", [
-                        "Inscrito Exitosamente", 
+                        "Inscrito Exitosamente (Nuevo Inscrito)", 
+                        "Inscrito Exitosamente (Re-inscripción)", 
                         "Presenta registro en plataforma Fonasa",
                         "Cambio de Domicilio", 
                         "Inscrito en Otro Centro", 
@@ -1639,7 +1652,7 @@ else:
                             rol_usuario = APP_CONFIG.get('rol', 'SIN_ROL')
                             
                             # Logica de hoja destino
-                            target_sheet_name = "registro_rescates" if categoria in ["Inscrito Exitosamente", "Presenta registro en plataforma Fonasa"] else "bajas_percapita"
+                            target_sheet_name = "registro_rescates" if categoria in ["Inscrito Exitosamente (Nuevo Inscrito)", "Inscrito Exitosamente (Re-inscripción)", "Presenta registro en plataforma Fonasa"] else "bajas_percapita"
                             
                             try:
                                 ws_target = sheet_rescates.worksheet(target_sheet_name)
