@@ -915,13 +915,14 @@ with st.sidebar:
                         row_to_update = -1
                         for i, row in enumerate(data_admin[1:], start=2):
                             row_padded = row + [''] * (len(headers) - len(row))
-                            if str(row_padded[col_cuenta]).strip() == MASTER_ACCOUNT_ID:
+                            if str(row_padded[col_cuenta]).strip().upper() == str(MASTER_ACCOUNT_ID).strip().upper():
                                 row_to_update = i
                                 break
                                 
                         if row_to_update > 0:
                             ws_admin.update_cell(row_to_update, col_clave + 1, nueva_clave)
                             st.success("¡Contraseña actualizada exitosamente!")
+                            load_app_configuration.clear()
                         else:
                             st.error("No se encontró el usuario en la base de datos.")
                     except Exception as e:
