@@ -1966,7 +1966,7 @@ else:
                                 st.markdown(f"<p style='font-size:0.85rem; color:#666; margin-bottom: 5px;'>Este paciente tiene {cant_aten} atenciones y es candidato a Captura Potencial si su año venció.</p>", unsafe_allow_html=True)
                             else:
                                 st.markdown(f"<p style='font-size:0.85rem; color:#666; margin-bottom: 5px;'>Requiere 3 atenciones para captura (actual: {cant_aten}). Puede registrar los datos preventivamente.</p>", unsafe_allow_html=True)
-                            fecha_inscrip_otro = st.date_input("Fecha aprox. de inscripción en su centro actual (Si la conoce)", value=None, min_value=datetime(2000, 1, 1))
+                            fecha_inscrip_otro = st.date_input("Fecha aprox. de inscripción en su centro actual (Si la conoce)", value=None, min_value=datetime(2000, 1, 1), format="DD/MM/YYYY")
                             acredita_domicilio = st.checkbox("¿Acredita cambio de domicilio laboral o particular con documento?")
                             st.markdown("</div>", unsafe_allow_html=True)
                         obs = st.text_area("Detalles Adicionales (Opcional)")
