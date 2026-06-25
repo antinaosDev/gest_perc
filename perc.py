@@ -304,7 +304,7 @@ def load_app_configuration(account_id):
                     cuenta_val = str(row_padded[i]).strip()
                     break
             
-            if cuenta_val == account_id:
+            if cuenta_val.upper() == str(account_id).strip().upper():
                 # Store all occurrences of each header to avoid data loss from duplicate columns
                 target_row = {}
                 for i, h in enumerate(headers):
@@ -949,8 +949,16 @@ with st.sidebar:
                             data_admin = ws_admin.get_all_values()
                             headers = [str(h).strip().upper() for h in data_admin[0]]
                             
-                            last_row = data_admin[-1]
-                            new_row = last_row.copy()
+                            col_cuenta_idx = headers.index("CUENTA") if "CUENTA" in headers else 0
+                            last_valid_row = None
+                            for row in reversed(data_admin[1:]):
+                                if len(row) > col_cuenta_idx and str(row[col_cuenta_idx]).strip() != "":
+                                    last_valid_row = row
+                                    break
+                            if not last_valid_row and len(data_admin) > 1:
+                                last_valid_row = data_admin[1]
+                                
+                            new_row = last_valid_row.copy()
                             new_row += [''] * (len(headers) - len(new_row))
                             
                             if "CUENTA" in headers: new_row[headers.index("CUENTA")] = n_cuenta
