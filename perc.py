@@ -1058,6 +1058,11 @@ if app_mode == "📊 Análisis Archivo Percápita":
                                             
                                         if grupos_seleccionados: df_estadistico = df_estadistico[df_estadistico[col_agrupacion].isin(grupos_seleccionados)]
                                         try:
+                                            import io
+                                            output = io.BytesIO()
+                                            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                                                df_estadistico.to_excel(writer, index=False, sheet_name='Estadisticas')
+                                            excel_data = output.getvalue()
                                             st.download_button(label="📊 Descargar Reporte Estadístico (Excel)", data=excel_data, file_name=f'Estadistica_{mes_corte_seleccionado}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', width='stretch')
                                         except Exception as e: st.error(f"Error generando Excel: {e}")
                         else: st.warning("No hay datos.")
