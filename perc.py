@@ -85,7 +85,7 @@ def normalize_rut(rut):
     if len(rut) < 2: return "INVALIDO"
     return rut
 
-@st.cache_data(ttl=60, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def get_demographic_data(url_demographic, url_rescates, _client):
     """Carga bases secundarias (Sector y Percápita)."""
     dem_data = {'sector': pd.DataFrame(), 'percapita': pd.DataFrame()}
