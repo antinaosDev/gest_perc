@@ -33,7 +33,6 @@ st.set_page_config(
 def cargar_datos_cache_v3(archivos_cargados):
     return reporte_percapita(archivos_cargados)
 
-@st.cache_data
 def convert_df_to_csv(df):
     return df.to_csv(index=False, sep=';').encode('utf-8-sig')
 
@@ -917,11 +916,11 @@ with st.sidebar:
     st.markdown("### 🏥 Panel Institucional")
     st.success("🟢 Sistema Online y Sincronizado")
     
-    st.markdown("""
-    **Módulos Disponibles:**
-    - 📊 Dashboard General
-    - 📋 Nómina de Rescate
-    - 📈 Estadísticas
+    st.info("""
+    **Módulos Disponibles:**\n
+    📊 Dashboard General\n
+    📋 Nómina de Rescate\n
+    📈 Estadísticas
     """)
     
     st.info("""
@@ -1047,10 +1046,14 @@ if app_mode == "📊 Análisis Archivo Percápita":
                                                         hoy = pd.Timestamp.today()
                                                         df_procesado.loc[idx, 'EDAD'] = hoy.year - nueva_fecha.year - ((hoy.month, hoy.day) < (nueva_fecha.month, nueva_fecha.day))
                                             if df_procesado['FECHA_NACIMIENTO'].isnull().sum() == 0: st.success("✅ ¡Fechas corregidas!")
-                                        
-                                        st.download_button(label="📥 Descargar CSV Consolidado", data=convert_df_to_csv(df_procesado), file_name=f'Inscritos_Percapita_{mes_corte_seleccionado}.csv', mime='text/csv', width='stretch')
+                                        df_descarga_csv = df_procesado[columnas_seleccionadas].copy() if columnas_seleccionadas else df_procesado.copy()
+                                        st.download_button(label="📥 Descargar CSV Consolidado", data=convert_df_to_csv(df_descarga_csv), file_name=f'Inscritos_Percapita_{mes_corte_seleccionado}.csv', mime='text/csv', width='stretch')
                                         
                                         df_estadistico = df_procesado.copy()
+                                        if columnas_seleccionadas:
+                                            cols_base = [c for c in columnas_seleccionadas if c in df_estadistico.columns]
+                                            df_estadistico = df_estadistico[cols_base]
+                                            
                                         if tipo_grupo in ["Personalizado (Años)", "Personalizado con Fracciones (Meses/Años)"]:
                                             df_estadistico = asignar_grupo_etario_custom(df_estadistico, rangos_custom_str)
                                             col_agrupacion = "GRUPO_ETARIO_CUSTOM"
