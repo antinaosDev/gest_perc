@@ -1284,7 +1284,7 @@ else:
     st.markdown("---")
 
     # TABS PARA ORGANIZAR LA APP
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Análisis de Brechas", "📈 Dashboard Demográfico", "📋 Nómina de Pacientes", "📝 Gestión de Rescates", "🏆 Métricas de Rescates"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Análisis de Brechas", "📈 Dashboard Demográfico", "📋 Nómina de Pacientes (Fugas y Alertas)", "📝 Gestión de Rescates", "🏆 Métricas de Rescates"])
 
     with tab1:
         st.markdown("### 📊 Análisis Estratégico y Financiero")
