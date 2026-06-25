@@ -1959,10 +1959,13 @@ else:
                         acredita_domicilio = False
                         # Mostrar campos adicionales solo si el paciente cumple los requisitos cronologicos de recurrencia (>= 3 atenciones)
                         cant_aten = paciente_data.get('CANT_ATENCIONES', 1)
-                        if categoria == "Inscrito en Otro Centro" and cant_aten >= 3:
+                        if categoria == "Inscrito en Otro Centro":
                             st.markdown("<div style='background-color: #FFF3CD; padding: 10px; border-radius: 5px; margin-bottom: 10px;'>", unsafe_allow_html=True)
                             st.markdown("<strong style='color:#856404;'>ℹ️ Datos para Excepción de Bloqueo (1 Año)</strong>", unsafe_allow_html=True)
-                            st.markdown(f"<p style='font-size:0.85rem; color:#666; margin-bottom: 5px;'>Este paciente tiene {cant_aten} atenciones y es candidato a Captura Potencial si su año venció.</p>", unsafe_allow_html=True)
+                            if cant_aten >= 3:
+                                st.markdown(f"<p style='font-size:0.85rem; color:#666; margin-bottom: 5px;'>Este paciente tiene {cant_aten} atenciones y es candidato a Captura Potencial si su año venció.</p>", unsafe_allow_html=True)
+                            else:
+                                st.markdown(f"<p style='font-size:0.85rem; color:#666; margin-bottom: 5px;'>Requiere 3 atenciones para captura (actual: {cant_aten}). Puede registrar los datos preventivamente.</p>", unsafe_allow_html=True)
                             fecha_inscrip_otro = st.date_input("Fecha aprox. de inscripción en su centro actual (Si la conoce)", value=None, min_value=datetime(2000, 1, 1))
                             acredita_domicilio = st.checkbox("¿Acredita cambio de domicilio laboral o particular con documento?")
                             st.markdown("</div>", unsafe_allow_html=True)
