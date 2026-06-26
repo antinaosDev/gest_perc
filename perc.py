@@ -1976,7 +1976,7 @@ else:
             )
             st.markdown("---")
             
-            if "espontáneo" in tipo_registro.lower():
+            if tipo_registro and "espontáneo" in tipo_registro.lower():
                 st.markdown("#### 🏃‍♂️ Registro de Paciente Espontáneo")
                 st.markdown("<p style='font-size:0.9rem; color:#555;'>Complete los datos del paciente que acudió sin estar agendado.</p>", unsafe_allow_html=True)
                 
@@ -2099,7 +2099,7 @@ else:
                             
                         except Exception as e:
                             st.error(f"❌ Error guardando datos: {e}")
-            if "agendado" in tipo_registro.lower() and not df_filtered.empty:
+            if tipo_registro and "agendado" in tipo_registro.lower() and not df_filtered.empty:
                 st.markdown("#### 📅 Registro de Paciente Agendado")
                 st.markdown("<p style='font-size:0.9rem; color:#555;'>Seleccione al paciente que estaba en su lista de pendientes.</p>", unsafe_allow_html=True)
                 df_ordenado_4 = df_filtered.copy()
@@ -2172,7 +2172,7 @@ else:
                     if True: # Reemplazo de st.form para permitir actualización dinámica
                         c_f1, c_f2 = st.columns(2)
                         with c_f1:
-                            nombre = st.text_input("Nombres", value=paciente_data['NOMBRE_PACIENTE']).strip().upper()
+                            nombre = st.text_input("Nombres", value=paciente_data.get('NOMBRE_PACIENTE', '')).strip().upper()
                             opciones_centro = ["Centro De Salud Familiar Chol Chol", "Posta De Salud Rural Malalche", "Posta De Salud Rural Huentelar", "Posta De Salud Rural Huamaqui"]
                             centro_actual = paciente_data['NOMBRE_CENTRO'] if 'NOMBRE_CENTRO' in df_filtered.columns else ""
                             idx_centro = opciones_centro.index(centro_actual) if centro_actual in opciones_centro else 0
@@ -2308,7 +2308,7 @@ else:
                                 st.rerun()
                             except Exception as e:
                                 st.error(f"❌ Error guardando datos: {e}")
-            elif "agendado" in tipo_registro.lower():
+            elif tipo_registro and "agendado" in tipo_registro.lower():
                 st.warning("No hay pacientes pendientes con los filtros actuales para rescatar.")
 
     if show_tab5:
