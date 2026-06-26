@@ -1558,7 +1558,10 @@ else:
                                             else:
                                                 razones.append("Inscrito en Otro Centro")
                                         elif estado_db == 'RECHAZO PREVISIONAL':
-                                            razones.append(f"Rechazo: {cat.title()}")
+                                            msg = f"Rechazo: {cat.title()}"
+                                            if obs and obs not in ['NAN', 'NONE', '']:
+                                                msg += f" - {obs.title()}"
+                                            razones.append(msg)
                                             
                                         if '[ACREDITA_DOMICILIO: SI]' in obs:
                                             razones.append("Acredita domicilio")
@@ -1572,13 +1575,13 @@ else:
                                                     v_date = pd.to_datetime(v_str + "-01")
                                                     dias_diff = (v_date - pd.to_datetime('today')).days
                                                     if dias_diff <= 0:
-                                                        razones.append(f"Bloqueo Vencido (hace {abs(dias_diff)} días)")
+                                                        razones.append(f"Bloqueo Inscripción Vencido (hace {abs(dias_diff)} días)")
                                                     else:
-                                                        razones.append(f"Bloqueado hasta {v_date.strftime('%m/%Y')} (faltan {dias_diff} días)")
+                                                        razones.append(f"Bloqueo Inscripción hasta {v_date.strftime('%m/%Y')} (faltan {dias_diff} días)")
                                                 except:
-                                                    razones.append(f"Vence bloqueo {v_str}")
+                                                    razones.append(f"Bloqueo Inscripción {v_str}")
                                             else:
-                                                razones.append("Vence bloqueo")
+                                                razones.append("Bloqueo Inscripción")
                                                 
                                         if not razones and obs and obs not in ['NAN', 'NONE', '']:
                                             razones.append(obs.title())
