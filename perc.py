@@ -1696,17 +1696,6 @@ else:
         
         if not hay_datos:
             st.info("No hay pacientes en estos estados críticos según los filtros actuales.")
-        else:
-            df_criticos_export = df_filtered[df_filtered['ESTADO_PERCAPITA'].isin(estados_criticos.keys())].copy()
-            if not df_criticos_export.empty:
-                st.markdown("---")
-                csv_criticos = df_criticos_export.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📥 Descargar Listado Crítico Completo (CSV)",
-                    data=csv_criticos,
-                    file_name="Listado_Pacientes_Criticos.csv",
-                    mime="text/csv",
-                )
 
     st.markdown("---")
 
