@@ -482,7 +482,7 @@ def get_rescate_data(config):
         # Seleccionar columnas útiles (SIN INFO CLÍNICA)
         # Se elimina EDAD_NUM de la visualización, se usa solo EDAD_ACTUAL
         cols_deseadas = ['RUT', 'RUT_CLEAN', 'NOMBRE_PACIENTE', 'TELEFONO', 'EDAD_ACTUAL', 'GENERO',
-                         'SECTOR', 'POLICLINICO', 'NOMBRE_PROFESIONAL', 'PROFESION', 'FECHA_AGENDADA', 'HORA_AGENDADA', 'MOTIVO_CONSULTA', 'CANT_ATENCIONES', 'ESTADO_PERCAPITA']
+                         'SECTOR', 'POLICLINICO', 'NOMBRE_PROFESIONAL', 'PROFESION', 'FECHA_AGENDADA', 'HORA_AGENDADA', 'MOTIVO_CONSULTA', 'CANT_ATENCIONES', 'ESTADO_PERCAPITA', 'TEMP_ANIO_AGENDA', 'TEMP_MES_AGENDA']
         cols_existentes = [c for c in cols_deseadas if c in df_rescate.columns]
         return df_rescate[cols_existentes], dem_info
     except Exception as e:
