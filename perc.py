@@ -1373,6 +1373,7 @@ with st.spinner("🔄 Cruzando bases de datos en tiempo real..."):
     df_rescate, dem_info = get_rescate_data(APP_CONFIG)
     APP_CONFIG['datos']['rescates_crudos'] = dem_info.get('rescates_crudos', pd.DataFrame())
     APP_CONFIG['datos']['bajas_crudas'] = dem_info.get('bajas_crudas', pd.DataFrame())
+    APP_CONFIG['datos']['df_rechazo_prev'] = dem_info.get('df_rechazo_prev', pd.DataFrame())
 
 anio_eval = dem_info.get('max_anio_percapita', 'N/A')
 mes_num = dem_info.get('max_mes_percapita', 0)
