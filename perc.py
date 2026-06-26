@@ -267,12 +267,18 @@ def get_demographic_data(url_demographic, url_rescates, _client):
                                         
                         if es_captura_potencial:
                             capturas_potenciales.append(rut)
+                            fecha_rescate = str(row.get('FECHA_RESCATE', '')).strip()
+                            if fecha_rescate and fecha_rescate.lower() not in ['nan', 'none']:
+                                dem_data.setdefault('capturas_manuales', set()).add(rut)
                         elif any(x in cat for x in ['ISAPRE', 'CAPREDENA', 'DIPRECA', 'FFAA', 'SISA']):
                             dem_data.setdefault('fondos_perdidos', set()).add(rut)
                         elif 'CARENCIA' in cat or 'BLOQUEO' in cat:
                             dem_data.setdefault('carencias_observacion', set()).add(rut)
                         else:
                             fugas_recurrentes.append(rut)
+                            fecha_rescate = str(row.get('FECHA_RESCATE', '')).strip()
+                            if fecha_rescate and fecha_rescate.lower() not in ['nan', 'none']:
+                                dem_data.setdefault('fugas_manuales', set()).add(rut)
                             
                     dem_data['fugas_recurrentes'] = set(fugas_recurrentes)
                     dem_data['capturas_potenciales'] = set(capturas_potenciales)
@@ -450,12 +456,14 @@ def get_rescate_data(config):
                 df['TEMP_ANIO_AGENDA'] = pd.to_datetime(df['FECHA_AGENDADA'].astype(str).str.split(' ').str[0], errors='coerce', dayfirst=True).dt.year
                 max_anio_eval = dem_info.get('max_anio_percapita', datetime.now().year)
                 
-                # Fugas recurrentes: >= 3 atenciones
-                idx_fuga = (df['ESTADO_PERCAPITA'] == 'FUGA RECURRENTE TEMP') & (df['TEMP_ANIO_AGENDA'] == max_anio_eval) & (df['CANT_ATENCIONES'] >= 3)
+                # Fugas recurrentes: >= 3 atenciones (o manual)
+                fugas_manuales = dem_info.get('fugas_manuales', set())
+                idx_fuga = (df['ESTADO_PERCAPITA'] == 'FUGA RECURRENTE TEMP') & (df['TEMP_ANIO_AGENDA'] == max_anio_eval) & ((df['CANT_ATENCIONES'] >= 3) | (df['RUT_CLEAN'].isin(fugas_manuales)))
                 df.loc[idx_fuga, 'ESTADO_PERCAPITA'] = 'FUGA RECURRENTE'
                 
-                # Capturas potenciales (Otro centro): >= 3 atenciones
-                idx_captura = (df['ESTADO_PERCAPITA'] == 'CAPTURA POTENCIAL TEMP') & (df['TEMP_ANIO_AGENDA'] == max_anio_eval) & (df['CANT_ATENCIONES'] >= 3)
+                # Capturas potenciales (Otro centro): >= 3 atenciones (o si fue registrado manualmente)
+                capturas_manuales = dem_info.get('capturas_manuales', set())
+                idx_captura = (df['ESTADO_PERCAPITA'] == 'CAPTURA POTENCIAL TEMP') & (df['TEMP_ANIO_AGENDA'] == max_anio_eval) & ((df['CANT_ATENCIONES'] >= 3) | (df['RUT_CLEAN'].isin(capturas_manuales)))
                 df.loc[idx_captura, 'ESTADO_PERCAPITA'] = 'CAPTURA POTENCIAL'
                 
                 df.loc[df['ESTADO_PERCAPITA'].isin(['FUGA RECURRENTE TEMP', 'CAPTURA POTENCIAL TEMP']), 'ESTADO_PERCAPITA'] = 'BAJA NO RECURRENTE'
@@ -1645,6 +1653,23 @@ else:
                         df_display = pd.DataFrame(display_data)
                         df_display.set_index('RUT', inplace=True)
                         st.table(df_display)
+                        
+                    # DEBUG: Mostrar ocultos temporalmente
+                    if estado_db == 'CAPTURA POTENCIAL' and 'CAPTURA POTENCIAL TEMP' in df_rescate['ESTADO_PERCAPITA'].values:
+                        ocultos = df_rescate[df_rescate['ESTADO_PERCAPITA'] == 'CAPTURA POTENCIAL TEMP']
+                        if not ocultos.empty:
+                            df_oc = ocultos.drop_duplicates(subset=['RUT_CLEAN'])
+                            with st.expander(f"🔍 INFO DEBUG: {len(df_oc)} pacientes ocultos por regla de 3 atenciones o año distinto"):
+                                debug_data = []
+                                for _, row in df_oc.iterrows():
+                                    debug_data.append({
+                                        'RUT': row.get('RUT', ''),
+                                        'Paciente': row.get('NOMBRE_PACIENTE', ''),
+                                        'Atenciones': row.get('CANT_ATENCIONES', 0),
+                                        'Año Agenda': row.get('TEMP_ANIO_AGENDA', '')
+                                    })
+                                if debug_data:
+                                    st.table(pd.DataFrame(debug_data))
                     st.markdown("")
         
         if not hay_datos:
