@@ -247,12 +247,22 @@ def get_demographic_data(url_demographic, url_rescates, _client):
                             if '[ACREDITA_DOMICILIO: SI]' in obs:
                                 es_captura_potencial = True
                             else:
-                                match = re.search(r'\[VENCE_BLOQUEO:\s*(\d{4}-\d{2})\]', obs)
+                                match = re.search(r'\[VENCE_BLOQUEO:\s*(\d{4}-\d{1,2})', obs)
                                 if match:
-                                    vence_str = match.group(1) + "-01"
+                                    vence_str = match.group(1)
+                                    if len(vence_str.split('-')[1]) == 1:
+                                        vence_str = vence_str.split('-')[0] + '-0' + vence_str.split('-')[1]
+                                    vence_str += "-01"
                                     fecha_vence = pd.to_datetime(vence_str, errors='coerce')
                                     fecha_eval = dem_data.get('fecha_corte_oficial', pd.to_datetime('today'))
+                                    # Fallback if fecha_eval is default 1900
+                                    if fecha_eval.year < 2000:
+                                        fecha_eval = pd.to_datetime('today')
+                                        
                                     if not pd.isna(fecha_vence) and fecha_eval >= fecha_vence:
+                                        es_captura_potencial = True
+                                    elif not pd.isna(fecha_vence) and pd.to_datetime('today') >= fecha_vence:
+                                        # Doble check con el dia de hoy
                                         es_captura_potencial = True
                                         
                         if es_captura_potencial:
@@ -2039,7 +2049,6 @@ else:
                                 try:
                                     ws_temp = sheet_rescates.worksheet(sheet_name)
                                     ruts_sheet = ws_temp.col_values(3)
-                                    fechas_sheet = ws_temp.col_values(8)
                                     
                                     for idx in range(len(ruts_sheet)-1, -1, -1):
                                         if normalize_rut(str(ruts_sheet[idx])) == rut_clean_esp:
@@ -2275,18 +2284,7 @@ else:
                                         # Recorremos de atras hacia adelante para poder borrar filas sin alterar el indice
                                         for idx in range(len(ruts_sheet)-1, -1, -1):
                                             if normalize_rut(str(ruts_sheet[idx])) == rut_clean_val:
-                                                fecha_reg_str = fechas_sheet[idx] if idx < len(fechas_sheet) else ""
-                                                try:
-                                                    fecha_reg = datetime.strptime(fecha_reg_str, "%Y-%m-%d %H:%M:%S")
-                                                    fecha_reg = stgo_tz.localize(fecha_reg)
-                                                    if (fecha_ahora - fecha_reg).total_seconds() < 3600:
-                                                        st.error(f"⚠️ ¡ALERTA! El paciente {rut_val} acaba de ser gestionado por otro funcionario hace un momento. Actualizando base de datos...")
-                                                        st.cache_data.clear()
-                                                        time.sleep(3)
-                                                        st.rerun()
-                                                except: pass
-                                                
-                                                # Si pasamos aqui, es una actualizacion de un registro antiguo. Borramos el antiguo.
+                                                # Actualización de un registro antiguo. Borramos el antiguo sin importar la fecha.
                                                 ws_temp.delete_row(idx + 1)
                                     except: pass
                                     
