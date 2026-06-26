@@ -1605,9 +1605,11 @@ else:
                                             
                                         if '[VENCE_BLOQUEO' in obs:
                                             import re
-                                            m = re.search(r'\[VENCE_BLOQUEO:\s*(\d{4}-\d{2})\]', obs)
+                                            m = re.search(r'\[VENCE_BLOQUEO:\s*(\d{4}-\d{1,2})', obs)
                                             if m:
                                                 v_str = m.group(1)
+                                                if len(v_str.split('-')[1]) == 1:
+                                                    v_str = v_str.split('-')[0] + '-0' + v_str.split('-')[1]
                                                 try:
                                                     v_date = pd.to_datetime(v_str + "-01")
                                                     dias_diff = (v_date - pd.to_datetime('today')).days
