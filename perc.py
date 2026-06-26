@@ -454,16 +454,21 @@ def get_rescate_data(config):
             
             if 'FECHA_AGENDADA' in df.columns:
                 df['TEMP_ANIO_AGENDA'] = pd.to_datetime(df['FECHA_AGENDADA'].astype(str).str.split(' ').str[0], errors='coerce', dayfirst=True).dt.year
+                df['TEMP_MES_AGENDA'] = pd.to_datetime(df['FECHA_AGENDADA'].astype(str).str.split(' ').str[0], errors='coerce', dayfirst=True).dt.month
                 max_anio_eval = dem_info.get('max_anio_percapita', datetime.now().year)
                 
-                # Fugas recurrentes: >= 3 atenciones (o manual)
+                # Fugas recurrentes: >= 3 atenciones en el año actual (o manual sin restricciones)
                 fugas_manuales = dem_info.get('fugas_manuales', set())
-                idx_fuga = (df['ESTADO_PERCAPITA'] == 'FUGA RECURRENTE TEMP') & (df['TEMP_ANIO_AGENDA'] == max_anio_eval) & ((df['CANT_ATENCIONES'] >= 3) | (df['RUT_CLEAN'].isin(fugas_manuales)))
+                es_fuga_natural = (df['TEMP_ANIO_AGENDA'] == max_anio_eval) & (df['CANT_ATENCIONES'] >= 3)
+                es_fuga_manual = df['RUT_CLEAN'].isin(fugas_manuales)
+                idx_fuga = (df['ESTADO_PERCAPITA'] == 'FUGA RECURRENTE TEMP') & (es_fuga_natural | es_fuga_manual)
                 df.loc[idx_fuga, 'ESTADO_PERCAPITA'] = 'FUGA RECURRENTE'
                 
-                # Capturas potenciales (Otro centro): >= 3 atenciones (o si fue registrado manualmente)
+                # Capturas potenciales (Otro centro): >= 3 atenciones en el año actual (o manual sin restricciones)
                 capturas_manuales = dem_info.get('capturas_manuales', set())
-                idx_captura = (df['ESTADO_PERCAPITA'] == 'CAPTURA POTENCIAL TEMP') & (df['TEMP_ANIO_AGENDA'] == max_anio_eval) & ((df['CANT_ATENCIONES'] >= 3) | (df['RUT_CLEAN'].isin(capturas_manuales)))
+                es_captura_natural = (df['TEMP_ANIO_AGENDA'] == max_anio_eval) & (df['CANT_ATENCIONES'] >= 3)
+                es_captura_manual = df['RUT_CLEAN'].isin(capturas_manuales)
+                idx_captura = (df['ESTADO_PERCAPITA'] == 'CAPTURA POTENCIAL TEMP') & (es_captura_natural | es_captura_manual)
                 df.loc[idx_captura, 'ESTADO_PERCAPITA'] = 'CAPTURA POTENCIAL'
                 
                 df.loc[df['ESTADO_PERCAPITA'].isin(['FUGA RECURRENTE TEMP', 'CAPTURA POTENCIAL TEMP']), 'ESTADO_PERCAPITA'] = 'BAJA NO RECURRENTE'
