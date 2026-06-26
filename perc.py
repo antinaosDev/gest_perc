@@ -1977,7 +1977,7 @@ else:
             )
             st.markdown("---")
             
-            if "Espontáneo" in tipo_registro:
+            if "espontáneo" in tipo_registro.lower():
                 st.markdown("#### 🏃‍♂️ Registro de Paciente Espontáneo")
                 st.markdown("<p style='font-size:0.9rem; color:#555;'>Complete los datos del paciente que acudió sin estar agendado.</p>", unsafe_allow_html=True)
                 
@@ -2096,7 +2096,7 @@ else:
                             
                         except Exception as e:
                             st.error(f"❌ Error guardando datos: {e}")
-            if "Agendado" in tipo_registro and not df_filtered.empty:
+            if "agendado" in tipo_registro.lower() and not df_filtered.empty:
                 st.markdown("#### 📅 Registro de Paciente Agendado")
                 st.markdown("<p style='font-size:0.9rem; color:#555;'>Seleccione al paciente que estaba en su lista de pendientes.</p>", unsafe_allow_html=True)
                 df_ordenado_4 = df_filtered.copy()
@@ -2305,7 +2305,7 @@ else:
                                 st.rerun()
                             except Exception as e:
                                 st.error(f"❌ Error guardando datos: {e}")
-            elif "Agendado" in tipo_registro:
+            elif "agendado" in tipo_registro.lower():
                 st.warning("No hay pacientes pendientes con los filtros actuales para rescatar.")
 
     if show_tab5:
