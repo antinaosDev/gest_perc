@@ -1526,6 +1526,7 @@ else:
                     for _, row in df_st_unique.iterrows():
                         rut_val = row.get('RUT', '')
                         nombre = row.get('NOMBRE_PACIENTE', 'Sin Nombre')
+                        edad = str(row.get('EDAD_ACTUAL', '')).replace('nan', '').replace('None', '')
                         cant = row.get('CANT_ATENCIONES', 0)
                         f_cita = str(row.get('FECHA_AGENDADA', '')).split(' ')[0] if pd.notna(row.get('FECHA_AGENDADA')) else ""
                         if f_cita in ['nan', 'None']: f_cita = ""
@@ -1534,38 +1535,45 @@ else:
                         motivo = str(row.get('MOTIVO_CONSULTA', '')).replace('nan', '').replace('None', '')
                         
                         razon = ""
-                        if estado_db in ['CAPTURA POTENCIAL', 'FONDOS PERDIDOS']:
-                            b_raw = APP_CONFIG.get('datos', {}).get('bajas_crudas', pd.DataFrame())
-                            rut_clean = row.get('RUT_CLEAN', '')
-                            if not b_raw.empty and rut_clean != '':
-                                if 'RUT_CLEAN' not in b_raw.columns and 'RUT' in b_raw.columns:
-                                    b_raw['RUT_CLEAN'] = b_raw['RUT'].apply(normalize_rut)
-                                if 'RUT_CLEAN' in b_raw.columns:
-                                    match_baja = b_raw[b_raw['RUT_CLEAN'] == rut_clean]
-                                    if not match_baja.empty:
-                                        ultimo_registro = match_baja.iloc[-1]
-                                        cat = str(ultimo_registro.get('CATEGORIA', '')).upper()
-                                        obs = str(ultimo_registro.get('OBSERVACION', '')).upper()
-                                        
-                                        if any(x in cat for x in ['ISAPRE', 'CAPREDENA', 'DIPRECA', 'FFAA', 'SISA']):
-                                            razon = f"Fondo: {cat}"
-                                        elif '[ACREDITA_DOMICILIO: SI]' in obs:
-                                            razon = "Acredita domicilio"
-                                        elif '[VENCE_BLOQUEO' in obs:
-                                            import re
-                                            m = re.search(r'\[VENCE_BLOQUEO:\s*(\d{4}-\d{2})\]', obs)
-                                            if m:
-                                                v_str = m.group(1)
-                                                try:
-                                                    v_date = pd.to_datetime(v_str + "-01")
-                                                    if v_date <= pd.to_datetime('today'):
-                                                        razon = "Bloqueo Vencido"
-                                                    else:
-                                                        razon = f"Bloqueado hasta {v_date.strftime('%m/%Y')}"
-                                                except:
-                                                    razon = f"Vence bloqueo {v_str}"
-                                            else:
-                                                razon = "Vence bloqueo"
+                        b_raw = APP_CONFIG.get('datos', {}).get('bajas_crudas', pd.DataFrame())
+                        rut_clean = row.get('RUT_CLEAN', '')
+                        if not b_raw.empty and rut_clean != '':
+                            if 'RUT_CLEAN' not in b_raw.columns and 'RUT' in b_raw.columns:
+                                b_raw['RUT_CLEAN'] = b_raw['RUT'].apply(normalize_rut)
+                            if 'RUT_CLEAN' in b_raw.columns:
+                                match_baja = b_raw[b_raw['RUT_CLEAN'] == rut_clean]
+                                if not match_baja.empty:
+                                    ultimo_registro = match_baja.iloc[-1]
+                                    cat = str(ultimo_registro.get('CATEGORIA', '')).upper()
+                                    obs = str(ultimo_registro.get('OBSERVACION', '')).upper()
+                                    
+                                    if any(x in cat for x in ['ISAPRE', 'CAPREDENA', 'DIPRECA', 'FFAA', 'SISA']):
+                                        razon = f"Fondo: {cat}"
+                                    elif '[ACREDITA_DOMICILIO: SI]' in obs:
+                                        razon = "Acredita domicilio"
+                                    elif '[VENCE_BLOQUEO' in obs:
+                                        import re
+                                        m = re.search(r'\[VENCE_BLOQUEO:\s*(\d{4}-\d{2})\]', obs)
+                                        if m:
+                                            v_str = m.group(1)
+                                            try:
+                                                v_date = pd.to_datetime(v_str + "-01")
+                                                dias_diff = (v_date - pd.to_datetime('today')).days
+                                                if dias_diff <= 0:
+                                                    razon = f"Bloqueo Vencido (hace {abs(dias_diff)} días)"
+                                                else:
+                                                    razon = f"Bloqueado hasta {v_date.strftime('%m/%Y')} (faltan {dias_diff} días)"
+                                            except:
+                                                razon = f"Vence bloqueo {v_str}"
+                                        else:
+                                            razon = "Vence bloqueo"
+                                    elif 'OTRO CENTRO' in cat:
+                                        razon = f"Otro Centro: {obs.title()}" if obs and obs not in ['NAN', 'NONE'] else "Inscrito en Otro Centro"
+                                    elif estado_db == 'RECHAZO PREVISIONAL':
+                                        razon = f"Rechazo: {obs.title()}" if obs and obs not in ['NAN', 'NONE'] else f"Rechazo: {cat.title()}"
+                                    else:
+                                        if obs and obs not in ['NAN', 'NONE', '']:
+                                            razon = obs.title()
                         
                         if not razon and cant >= 3:
                             razon = "Tiene 3 o más atenciones"
@@ -1573,6 +1581,7 @@ else:
                         display_data.append({
                             "RUT": rut_val,
                             "Paciente": nombre,
+                            "Edad": edad,
                             "Teléfono": telefono,
                             "Atenciones (Año)": cant,
                             "Fecha Cita": f_cita,
