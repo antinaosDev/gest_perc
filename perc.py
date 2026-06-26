@@ -85,7 +85,7 @@ def normalize_rut(rut):
     if len(rut) < 2: return "INVALIDO"
     return rut
 
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_data(ttl=60, show_spinner=False)
 def get_demographic_data(url_demographic, url_rescates, _client):
     """Carga bases secundarias (Sector y Percápita)."""
     dem_data = {'sector': pd.DataFrame(), 'percapita': pd.DataFrame()}
@@ -2094,7 +2094,7 @@ else:
                             
                             st.success(f"✅ ¡Paciente Espontáneo {nombre_esp} registrado!")
                             st.cache_data.clear()
-                            time.sleep(2)
+                            time.sleep(5)
                             st.rerun()
                             
                         except Exception as e:
@@ -2304,7 +2304,7 @@ else:
                             
                                 st.success(f"✅ ¡Paciente {nombre} ({rut_val}) registrado en la categoría '{categoria}'!")
                                 st.cache_data.clear()
-                                time.sleep(2)
+                                time.sleep(5)
                                 st.rerun()
                             except Exception as e:
                                 st.error(f"❌ Error guardando datos: {e}")
