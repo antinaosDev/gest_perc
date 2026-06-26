@@ -1529,8 +1529,9 @@ else:
                         cant = row.get('CANT_ATENCIONES', 0)
                         f_cita = str(row.get('FECHA_AGENDADA', '')).split(' ')[0] if pd.notna(row.get('FECHA_AGENDADA')) else ""
                         if f_cita in ['nan', 'None']: f_cita = ""
-                        poli = str(row.get('POLICLINICO', '')).replace('nan', '').replace('None', '')
-                        sector = str(row.get('SECTOR', '')).replace('nan', '').replace('None', '')
+                        telefono = str(row.get('TELEFONO', '')).replace('nan', '').replace('None', '')
+                        if not telefono: telefono = 'No registra'
+                        motivo = str(row.get('MOTIVO_CONSULTA', '')).replace('nan', '').replace('None', '')
                         
                         razon = ""
                         if estado_db in ['CAPTURA POTENCIAL', 'FONDOS PERDIDOS']:
@@ -1553,19 +1554,29 @@ else:
                                         elif '[VENCE_BLOQUEO' in obs:
                                             import re
                                             m = re.search(r'\[VENCE_BLOQUEO:\s*(\d{4}-\d{2})\]', obs)
-                                            v = m.group(1) if m else 'Fecha'
-                                            razon = f"Vence bloqueo {v}"
+                                            if m:
+                                                v_str = m.group(1)
+                                                try:
+                                                    v_date = pd.to_datetime(v_str + "-01")
+                                                    if v_date <= pd.to_datetime('today'):
+                                                        razon = "Bloqueo Vencido"
+                                                    else:
+                                                        razon = f"Bloqueado hasta {v_date.strftime('%m/%Y')}"
+                                                except:
+                                                    razon = f"Vence bloqueo {v_str}"
+                                            else:
+                                                razon = "Vence bloqueo"
                         
                         if not razon and cant >= 3:
-                            razon = "Cumple atenciones"
+                            razon = "Tiene 3 o más atenciones"
                             
                         display_data.append({
                             "RUT": rut_val,
                             "Paciente": nombre,
+                            "Teléfono": telefono,
                             "Atenciones (Año)": cant,
                             "Fecha Cita": f_cita,
-                            "Sector": sector,
-                            "Policlínico": poli,
+                            "Motivo Consulta": motivo,
                             "Observación / Condición": razon
                         })
                         
