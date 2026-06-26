@@ -2455,16 +2455,10 @@ else:
                 col_a, col_b = st.columns(2)
             
                 with col_a:
-                    st.markdown("#### 📊 Gestiones por Categoría")
+                    st.markdown("#### 📊 Distribución de Rescates")
                     
-                    df_combined_cat = pd.DataFrame()
                     if not df_rescates_raw.empty and 'CATEGORIA' in df_rescates_raw.columns:
-                        df_combined_cat = pd.concat([df_combined_cat, df_rescates_raw[['CATEGORIA']]])
-                    if not df_bajas_raw.empty and 'CATEGORIA' in df_bajas_raw.columns:
-                        df_combined_cat = pd.concat([df_combined_cat, df_bajas_raw[['CATEGORIA']]])
-                        
-                    if not df_combined_cat.empty:
-                        df_cat = df_combined_cat['CATEGORIA'].value_counts().reset_index()
+                        df_cat = df_rescates_raw['CATEGORIA'].value_counts().reset_index()
                         df_cat.columns = ['CATEGORIA', 'CANTIDAD']
                         
                         fig_cat = px.bar(df_cat, x='CANTIDAD', y='CATEGORIA', orientation='h', color='CANTIDAD', color_continuous_scale="Blues", text='CANTIDAD')
