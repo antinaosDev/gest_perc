@@ -2136,6 +2136,17 @@ else:
                             if len(rut_clean_str) > 1:
                                 rut_clean_str = f"{rut_clean_str[:-1]}-{rut_clean_str[-1]}"
                                 
+                            rut_clean_val = normalize_rut(rut_clean_str)
+                            
+                            for sheet_name in ["registro_rescates", "bajas_percapita"]:
+                                try:
+                                    ws_temp = sheet_rescates.worksheet(sheet_name)
+                                    ruts_sheet = ws_temp.col_values(3)
+                                    for idx in range(len(ruts_sheet)-1, -1, -1):
+                                        if normalize_rut(str(ruts_sheet[idx])) == rut_clean_val:
+                                            ws_temp.delete_row(idx + 1)
+                                except: pass
+                                
                             row_esp = [nombre_esp, centro_esp, rut_clean_str, anio_esp, mes_esp, cat_esp, obs_final_esp, fecha_rescate_esp, usuario_gestor_esp]
                             ws_target_esp.append_row(row_esp)
                             
