@@ -1549,31 +1549,41 @@ else:
                                     
                                     if any(x in cat for x in ['ISAPRE', 'CAPREDENA', 'DIPRECA', 'FFAA', 'SISA']):
                                         razon = f"Fondo: {cat}"
-                                    elif '[ACREDITA_DOMICILIO: SI]' in obs:
-                                        razon = "Acredita domicilio"
-                                    elif '[VENCE_BLOQUEO' in obs:
-                                        import re
-                                        m = re.search(r'\[VENCE_BLOQUEO:\s*(\d{4}-\d{2})\]', obs)
-                                        if m:
-                                            v_str = m.group(1)
-                                            try:
-                                                v_date = pd.to_datetime(v_str + "-01")
-                                                dias_diff = (v_date - pd.to_datetime('today')).days
-                                                if dias_diff <= 0:
-                                                    razon = f"Bloqueo Vencido (hace {abs(dias_diff)} días)"
-                                                else:
-                                                    razon = f"Bloqueado hasta {v_date.strftime('%m/%Y')} (faltan {dias_diff} días)"
-                                            except:
-                                                razon = f"Vence bloqueo {v_str}"
-                                        else:
-                                            razon = "Vence bloqueo"
-                                    elif 'OTRO CENTRO' in cat:
-                                        razon = f"Otro Centro: {obs.title()}" if obs and obs not in ['NAN', 'NONE'] else "Inscrito en Otro Centro"
-                                    elif estado_db == 'RECHAZO PREVISIONAL':
-                                        razon = f"Rechazo: {obs.title()}" if obs and obs not in ['NAN', 'NONE'] else f"Rechazo: {cat.title()}"
                                     else:
-                                        if obs and obs not in ['NAN', 'NONE', '']:
-                                            razon = obs.title()
+                                        razones = []
+                                        if 'OTRO CENTRO' in cat:
+                                            centro_nombre = obs.split('[')[0].strip() if obs else ""
+                                            if centro_nombre and centro_nombre not in ['NAN', 'NONE']:
+                                                razones.append(f"Otro Centro: {centro_nombre.title()}")
+                                            else:
+                                                razones.append("Inscrito en Otro Centro")
+                                        elif estado_db == 'RECHAZO PREVISIONAL':
+                                            razones.append(f"Rechazo: {cat.title()}")
+                                            
+                                        if '[ACREDITA_DOMICILIO: SI]' in obs:
+                                            razones.append("Acredita domicilio")
+                                            
+                                        if '[VENCE_BLOQUEO' in obs:
+                                            import re
+                                            m = re.search(r'\[VENCE_BLOQUEO:\s*(\d{4}-\d{2})\]', obs)
+                                            if m:
+                                                v_str = m.group(1)
+                                                try:
+                                                    v_date = pd.to_datetime(v_str + "-01")
+                                                    dias_diff = (v_date - pd.to_datetime('today')).days
+                                                    if dias_diff <= 0:
+                                                        razones.append(f"Bloqueo Vencido (hace {abs(dias_diff)} días)")
+                                                    else:
+                                                        razones.append(f"Bloqueado hasta {v_date.strftime('%m/%Y')} (faltan {dias_diff} días)")
+                                                except:
+                                                    razones.append(f"Vence bloqueo {v_str}")
+                                            else:
+                                                razones.append("Vence bloqueo")
+                                                
+                                        if not razones and obs and obs not in ['NAN', 'NONE', '']:
+                                            razones.append(obs.title())
+                                            
+                                        razon = " | ".join(razones)
                         
                         if not razon and cant >= 3:
                             razon = "Tiene 3 o más atenciones"
