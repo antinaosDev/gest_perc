@@ -2450,54 +2450,23 @@ else:
                 col_a, col_b = st.columns(2)
             
                 with col_a:
-                    st.markdown("#### 🥇 Top Gestores")
-                    if 'USUARIO_GESTOR' in df_rescates_raw.columns:
-                        if 'CATEGORIA' in df_rescates_raw.columns:
-                            df_exitosos = df_rescates_raw[df_rescates_raw['CATEGORIA'].str.contains("Inscrito Exitosamente", na=False, case=False)]
-                        else:
-                            df_exitosos = df_rescates_raw
-                        df_gestores = df_exitosos['USUARIO_GESTOR'].value_counts().reset_index()
-                        df_gestores.columns = ['USUARIO_GESTOR', 'CANTIDAD']
+                    st.markdown("#### 📊 Gestiones por Categoría")
+                    if 'CATEGORIA' in df_rescates_raw.columns:
+                        df_cat = df_rescates_raw['CATEGORIA'].value_counts().reset_index()
+                        df_cat.columns = ['CATEGORIA', 'CANTIDAD']
                         
-                        # Crear Podium Visual (Top 5)
-                        df_gestores = df_gestores.head(5).copy()
-                        
-                        medals = ["🥇", "🥈", "🥉", "🏅", "🏅"]
-                        colors = ["#FFD700", "#C0C0C0", "#CD7F32", "#45B7D1", "#45B7D1"]
-                        
-                        n_gestores = len(df_gestores)
-                        df_gestores['MEDAL'] = [medals[i] for i in range(n_gestores)]
-                        df_gestores['COLOR'] = [colors[i] for i in range(n_gestores)]
-                        df_gestores['GESTOR_LABEL'] = df_gestores['MEDAL'] + " " + df_gestores['USUARIO_GESTOR'].str.split().str[0]
-                        
-                        fig_gestores = px.bar(df_gestores, 
-                                              x='GESTOR_LABEL', 
-                                              y='CANTIDAD', 
-                                              color='GESTOR_LABEL',
-                                              color_discrete_sequence=df_gestores['COLOR'].tolist(),
-                                              text='CANTIDAD')
-                                              
-                        fig_gestores.update_traces(
-                            textposition='outside', 
-                            textfont_size=16, 
-                            textfont_color='black',
-                            marker_line_color='black', 
-                            marker_line_width=2, 
-                            opacity=0.9
-                        )
-                        
-                        fig_gestores.update_layout(
+                        fig_cat = px.bar(df_cat, x='CANTIDAD', y='CATEGORIA', orientation='h', color='CANTIDAD', color_continuous_scale="Blues", text='CANTIDAD')
+                        fig_cat.update_traces(textposition='auto', marker_line_color='rgb(8,48,107)', marker_line_width=1.5, opacity=0.8)
+                        fig_cat.update_layout(
+                            yaxis={'categoryorder':'total ascending'}, 
                             showlegend=False, 
                             paper_bgcolor='rgba(0,0,0,0)', 
                             plot_bgcolor='rgba(0,0,0,0)', 
-                            font_color='#2C3E50',
-                            xaxis_title="", 
-                            yaxis_title="Pacientes Rescatados",
-                            xaxis={'categoryorder':'total descending'},
+                            font_color='#2C3E50', 
                             margin=dict(l=0, r=0, t=30, b=0),
-                            title={'text': '🏆 ¡Podio de Héroes del Percápita!', 'y':0.95, 'x':0.5, 'xanchor': 'center', 'yanchor': 'top'}
+                            yaxis_title=""
                         )
-                        st.plotly_chart(fig_gestores, width="stretch")
+                        st.plotly_chart(fig_cat, width="stretch")
             
                 with col_b:
                     st.markdown("#### 🏥 Rescates por Centro")
