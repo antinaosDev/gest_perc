@@ -1966,8 +1966,19 @@ else:
             st.markdown("### 📝 Registro Manual de Pacientes Rescatados")
             st.info("Los pacientes registrados aquí **desaparecerán automáticamente** de las brechas de per cápita pendientes.")
             
-            with st.expander("➕ Registrar Paciente Espontáneo (No agendado)", expanded=False):
-                st.markdown("<p style='font-size:0.9rem; color:#555;'>Utilice este formulario para registrar un rescate de un paciente que no figura en la lista de pendientes actual (por ejemplo, pacientes que acuden de forma espontánea).</p>", unsafe_allow_html=True)
+            tipo_registro = st.radio(
+                "¿A quién desea registrar hoy?",
+                options=[
+                    "📅 A un paciente agendado (Seleccionar de la lista de pendientes)", 
+                    "🚶‍♂️ A un paciente espontáneo (Vino sin cita o no figura en la lista)"
+                ],
+                index=0
+            )
+            st.markdown("---")
+            
+            if "Espontáneo" in tipo_registro:
+                st.markdown("#### 🏃‍♂️ Registro de Paciente Espontáneo")
+                st.markdown("<p style='font-size:0.9rem; color:#555;'>Complete los datos del paciente que acudió sin estar agendado.</p>", unsafe_allow_html=True)
                 
                 rut_esp = st.text_input("RUT del Paciente (Ej: 12345678-9)", key="rut_esp").strip()
                 nombre_esp = st.text_input("Nombre Completo", key="nombre_esp").strip().upper()
@@ -2084,9 +2095,9 @@ else:
                             
                         except Exception as e:
                             st.error(f"❌ Error guardando datos: {e}")
-            st.markdown("---")
-        
-            if not df_filtered.empty:
+            if "Agendado" in tipo_registro and not df_filtered.empty:
+                st.markdown("#### 📅 Registro de Paciente Agendado")
+                st.markdown("<p style='font-size:0.9rem; color:#555;'>Seleccione al paciente que estaba en su lista de pendientes.</p>", unsafe_allow_html=True)
                 df_ordenado_4 = df_filtered.copy()
                 if 'FECHA_AGENDADA' in df_ordenado_4.columns:
                     fecha_b = df_ordenado_4['FECHA_AGENDADA'].astype(str).str.split(' ').str[0].replace({'nan': '', 'None': ''})
