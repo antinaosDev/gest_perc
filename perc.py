@@ -1601,7 +1601,8 @@ else:
                         
                     if display_data:
                         df_display = pd.DataFrame(display_data)
-                        st.dataframe(df_display, hide_index=True, use_container_width=True)
+                        df_display.set_index('RUT', inplace=True)
+                        st.table(df_display)
                     st.markdown("")
         
         if not hay_datos:
