@@ -431,7 +431,6 @@ def get_rescate_data(config):
             
             # Lógica manual sobreescribe:
             df.loc[(df['ESTADO_PERCAPITA'].isin(['PENDIENTE INSCRIPCION', 'RECHAZO PREVISIONAL'])) & (df['RUT_CLEAN'].isin(isapres_observacion)), 'ESTADO_PERCAPITA'] = 'OBSERVACION ISAPRE TEMP'
-            df.loc[(df['ESTADO_PERCAPITA'].isin(['PENDIENTE INSCRIPCION', 'RECHAZO PREVISIONAL'])) & (df['RUT_CLEAN'].isin(carencias_observacion)), 'ESTADO_PERCAPITA'] = 'RECHAZO PREVISIONAL' # Carencias siempre visibles
             
             df.loc[(df['RUT_CLEAN'].isin(fallecidos_historicos)), 'ESTADO_PERCAPITA'] = 'FALLECIDO HISTORICO'
             
@@ -463,7 +462,7 @@ def get_rescate_data(config):
         # Seleccionar columnas útiles (SIN INFO CLÍNICA)
         # Se elimina EDAD_NUM de la visualización, se usa solo EDAD_ACTUAL
         cols_deseadas = ['RUT', 'RUT_CLEAN', 'NOMBRE_PACIENTE', 'TELEFONO', 'EDAD_ACTUAL', 'GENERO',
-                         'SECTOR', 'POLICLINICO', 'NOMBRE_PROFESIONAL', 'PROFESION', 'FECHA_AGENDADA', 'HORA_AGENDADA', 'MOTIVO_CONSULTA', 'ESTADO_PERCAPITA']
+                         'SECTOR', 'POLICLINICO', 'NOMBRE_PROFESIONAL', 'PROFESION', 'FECHA_AGENDADA', 'HORA_AGENDADA', 'MOTIVO_CONSULTA', 'CANT_ATENCIONES', 'ESTADO_PERCAPITA']
         cols_existentes = [c for c in cols_deseadas if c in df_rescate.columns]
         return df_rescate[cols_existentes], dem_info
     except Exception as e:
@@ -1538,30 +1537,49 @@ else:
                                     b_raw['RUT_CLEAN'] = b_raw['RUT'].apply(normalize_rut)
                                 if 'RUT_CLEAN' in b_raw.columns:
                                     match_baja = b_raw[b_raw['RUT_CLEAN'] == rut_clean]
-                                if not match_baja.empty:
-                                    ultimo_registro = match_baja.iloc[-1]
-                                    cat = str(ultimo_registro.get('CATEGORIA', '')).upper()
-                                    obs = str(ultimo_registro.get('OBSERVACION', '')).upper()
-                                    
-                                    if 'ISAPRE' in cat:
-                                        razon = f" *(Paciente Isapre con {cant} atenciones)*"
-                                    elif '[ACREDITA_DOMICILIO: SI]' in obs:
-                                        razon = " *(Acredita cambio de domicilio)*"
-                                    elif '[VENCE_BLOQUEO' in obs:
-                                        import re
-                                        m = re.search(r'\[VENCE_BLOQUEO:\s*(\d{4}-\d{2})\]', obs)
-                                        v = m.group(1) if m else 'Fecha'
-                                        razon = f" *(Venció bloqueo de 1 año en {v})*"
-                                        if cant >= 3:
-                                            razon += f" y tiene {cant} atenciones"
+                                    if not match_baja.empty:
+                                        ultimo_registro = match_baja.iloc[-1]
+                                        cat = str(ultimo_registro.get('CATEGORIA', '')).upper()
+                                        obs = str(ultimo_registro.get('OBSERVACION', '')).upper()
+                                        
+                                        if 'ISAPRE' in cat:
+                                            razon = f" *(Paciente Isapre con {cant} atenciones)*"
+                                        elif '[ACREDITA_DOMICILIO: SI]' in obs:
+                                            razon = " *(Acredita cambio de domicilio)*"
+                                        elif '[VENCE_BLOQUEO' in obs:
+                                            import re
+                                            m = re.search(r'\[VENCE_BLOQUEO:\s*(\d{4}-\d{2})\]', obs)
+                                            v = m.group(1) if m else 'Fecha'
+                                            razon = f" *(Venció bloqueo de 1 año en {v})*"
+                                            if cant >= 3:
+                                                razon += f" y tiene {cant} atenciones"
                             if not razon and cant >= 3:
                                 razon = f" *(Cumple {cant} atenciones en el año)*"
                                 
-                        st.markdown(f"- `{row['RUT']}` - {nombre} <span style='color: #28a745; font-size: 0.85rem;'>{razon}</span>", unsafe_allow_html=True)
+                        f_cita = str(row.get('FECHA_AGENDADA', '')).split(' ')[0] if pd.notna(row.get('FECHA_AGENDADA')) else ""
+                        if f_cita in ['nan', 'None']: f_cita = ""
+                        poli = row.get('POLICLINICO', '')
+                        sector = row.get('SECTOR', '')
+                        extra_info = f" | {f_cita}" if f_cita else ""
+                        if poli and poli not in ['nan', 'None']: extra_info += f" | {poli}"
+                        if sector and sector not in ['nan', 'None']: extra_info += f" | Sector: {sector}"
+                                
+                        st.markdown(f"- `{row['RUT']}` - {nombre} <span style='color: #28a745; font-size: 0.85rem;'>{razon}</span> <span style='color: #666; font-size: 0.8rem;'>{extra_info}</span>", unsafe_allow_html=True)
                     st.markdown("")
         
         if not hay_datos:
             st.info("No hay pacientes en estos estados críticos según los filtros actuales.")
+        else:
+            df_criticos_export = df_filtered[df_filtered['ESTADO_PERCAPITA'].isin(estados_criticos.keys())].copy()
+            if not df_criticos_export.empty:
+                st.markdown("---")
+                csv_criticos = df_criticos_export.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 Descargar Listado Crítico Completo (CSV)",
+                    data=csv_criticos,
+                    file_name="Listado_Pacientes_Criticos.csv",
+                    mime="text/csv",
+                )
 
     st.markdown("---")
 
@@ -1882,6 +1900,126 @@ else:
         with tab4:
             st.markdown("### 📝 Registro Manual de Pacientes Rescatados")
             st.info("Los pacientes registrados aquí **desaparecerán automáticamente** de las brechas de per cápita pendientes.")
+            
+            with st.expander("➕ Registrar Paciente Espontáneo (No agendado)", expanded=False):
+                st.markdown("<p style='font-size:0.9rem; color:#555;'>Utilice este formulario para registrar un rescate de un paciente que no figura en la lista de pendientes actual (por ejemplo, pacientes que acuden de forma espontánea).</p>", unsafe_allow_html=True)
+                
+                rut_esp = st.text_input("RUT del Paciente (Ej: 12345678-9)", key="rut_esp").strip()
+                nombre_esp = st.text_input("Nombre Completo", key="nombre_esp").strip().upper()
+                centro_esp = st.selectbox("Centro de Salud", ["Centro De Salud Familiar Chol Chol", "Posta", "Otro"], key="centro_esp")
+                
+                cat_esp = st.selectbox("Categoría de Gestión*", [
+                    "Inscrito Exitosamente (Nuevo Inscrito)", 
+                    "Inscrito Exitosamente (Re-inscripción)",
+                    "Presenta registro en plataforma Fonasa",
+                    "Inscrito en Otro Centro", 
+                    "Fallecido", 
+                    "No Contesta / Inubicable",
+                    "Rechaza Inscripción",
+                    "Observación: Paciente Isapre",
+                    "Observación: Carencia / Bloqueo Fonasa",
+                    "Otro"
+                ], key="cat_esp")
+                
+                fecha_inscrip_esp = None
+                acredita_dom_esp = False
+                
+                if cat_esp == "Inscrito en Otro Centro":
+                    st.markdown("<div style='background-color: #FFF3CD; padding: 10px; border-radius: 5px; margin-bottom: 10px;'>", unsafe_allow_html=True)
+                    st.markdown("<strong style='color:#856404;'>ℹ️ Datos para Excepción de Bloqueo (1 Año)</strong>", unsafe_allow_html=True)
+                    st.markdown("<p style='font-size:0.85rem; color:#666; margin-bottom: 5px;'>Al ser un paciente espontáneo, se asume que no tiene atenciones previas registradas. Puede registrar sus datos para excepción.</p>", unsafe_allow_html=True)
+                    fecha_inscrip_esp = st.date_input("Fecha aprox. de inscripción en su centro actual (Si la conoce)", value=None, min_value=datetime(2000, 1, 1), format="DD/MM/YYYY", key="fecha_esp")
+                    acredita_dom_esp = st.checkbox("¿Acredita cambio de domicilio laboral o particular con documento?", key="acredita_esp")
+                    st.markdown("</div>", unsafe_allow_html=True)
+                    
+                obs_esp = st.text_area("Detalles Adicionales (Opcional)", key="obs_esp")
+                
+                if st.button("Guardar Paciente Espontáneo", type="primary", use_container_width=True):
+                    if not rut_esp or len(rut_esp) < 8:
+                        st.error("Debe ingresar un RUT válido.")
+                    elif not nombre_esp:
+                        st.error("Debe ingresar el nombre del paciente.")
+                    else:
+                        try:
+                            import pytz
+                            from datetime import datetime
+                            stgo_tz = pytz.timezone('America/Santiago')
+                            fecha_rescate_esp = datetime.now(stgo_tz).strftime("%Y-%m-%d %H:%M:%S")
+                            usuario_gestor_esp = MASTER_ACCOUNT_ID
+                            rol_usuario_esp = APP_CONFIG.get('rol', 'SIN_ROL')
+                            
+                            target_sheet_name_esp = "registro_rescates" if cat_esp in ["Inscrito Exitosamente (Nuevo Inscrito)", "Inscrito Exitosamente (Re-inscripción)", "Presenta registro en plataforma Fonasa"] else "bajas_percapita"
+                            
+                            url_rescates = st.secrets["URL_RESCATES"]
+                            scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+                            creds = Credentials.from_service_account_info(APP_CONFIG['credenciales'], scopes=scope)
+                            client_gs = gspread.authorize(creds)
+                            sheet_rescates = client_gs.open_by_url(url_rescates)
+                            
+                            rut_clean_esp = normalize_rut(rut_esp)
+                            fecha_ahora_esp = datetime.now(stgo_tz)
+                            
+                            for sheet_name in ["registro_rescates", "bajas_percapita"]:
+                                try:
+                                    ws_temp = sheet_rescates.worksheet(sheet_name)
+                                    ruts_sheet = ws_temp.col_values(3)
+                                    fechas_sheet = ws_temp.col_values(8)
+                                    
+                                    for idx in range(len(ruts_sheet)-1, -1, -1):
+                                        if normalize_rut(str(ruts_sheet[idx])) == rut_clean_esp:
+                                            fecha_reg_str = fechas_sheet[idx] if idx < len(fechas_sheet) else ""
+                                            try:
+                                                fecha_reg = datetime.strptime(fecha_reg_str, "%Y-%m-%d %H:%M:%S")
+                                                fecha_reg = stgo_tz.localize(fecha_reg)
+                                                if (fecha_ahora_esp - fecha_reg).total_seconds() < 3600:
+                                                    st.error(f"⚠️ ¡ALERTA! El paciente {rut_esp} acaba de ser gestionado por otro funcionario hace un momento. Actualizando base de datos...")
+                                                    st.cache_data.clear()
+                                                    time.sleep(3)
+                                                    st.rerun()
+                                            except: pass
+                                            ws_temp.delete_row(idx + 1)
+                                except: pass
+                            
+                            try:
+                                ws_target_esp = sheet_rescates.worksheet(target_sheet_name_esp)
+                            except gspread.exceptions.WorksheetNotFound:
+                                ws_target_esp = sheet_rescates.add_worksheet(title=target_sheet_name_esp, rows="1000", cols="10")
+                                ws_target_esp.append_row(["NOMBRES", "NOMBRE_CENTRO", "RUT", "ANIO_CORTE", "MES_CORTE", "CATEGORIA", "OBSERVACION", "FECHA_RESCATE", "USUARIO_GESTOR"])
+                            
+                            meses_dict = {1:"Enero",2:"Febrero",3:"Marzo",4:"Abril",5:"Mayo",6:"Junio",7:"Julio",8:"Agosto",9:"Septiembre",10:"Octubre",11:"Noviembre",12:"Diciembre"}
+                            anio_esp = dem_info.get('max_anio_percapita', datetime.now().year)
+                            mes_esp = meses_dict.get(dem_info.get('max_mes_percapita', datetime.now().month), "Enero")
+                            
+                            if target_sheet_name_esp == "registro_rescates":
+                                obs_final_esp = f"[{cat_esp}] {obs_esp}" if obs_esp else cat_esp
+                            else:
+                                obs_final_esp = obs_esp
+                                if cat_esp == "Inscrito en Otro Centro":
+                                    if acredita_dom_esp:
+                                        obs_final_esp = f"[ACREDITA_DOMICILIO: SI] {obs_final_esp}"
+                                    elif fecha_inscrip_esp:
+                                        vence_dt_esp = fecha_inscrip_esp + pd.DateOffset(years=1)
+                                        obs_final_esp = f"[VENCE_BLOQUEO: {vence_dt_esp.strftime('%Y-%m')}] {obs_final_esp}"
+                            
+                            row_esp = [nombre_esp, centro_esp, rut_esp, anio_esp, mes_esp, cat_esp, obs_final_esp, fecha_rescate_esp, usuario_gestor_esp]
+                            ws_target_esp.append_row(row_esp)
+                            
+                            try:
+                                ws_auditoria = sheet_rescates.worksheet("auditoria")
+                            except gspread.exceptions.WorksheetNotFound:
+                                ws_auditoria = sheet_rescates.add_worksheet(title="auditoria", rows="1000", cols="10")
+                                ws_auditoria.append_row(["FECHA_HORA_CL", "CUENTA", "ROL", "ACCION", "RUT_PACIENTE", "NOMBRE_PACIENTE", "CATEGORIA_GESTION", "OBSERVACION"])
+                            
+                            ws_auditoria.append_row([fecha_rescate_esp, usuario_gestor_esp, rol_usuario_esp, "NUEVO REGISTRO ESPONTÁNEO", rut_esp, nombre_esp, cat_esp, obs_esp])
+                            
+                            st.success(f"✅ ¡Paciente Espontáneo {nombre_esp} registrado!")
+                            st.cache_data.clear()
+                            time.sleep(2)
+                            st.rerun()
+                            
+                        except Exception as e:
+                            st.error(f"❌ Error guardando datos: {e}")
+            st.markdown("---")
         
             if not df_filtered.empty:
                 df_ordenado_4 = df_filtered.copy()
