@@ -2437,9 +2437,9 @@ else:
                     df_rescates_raw['MES_RESCATE'] = 'Sin Fecha'
                 
                 if 'CATEGORIA' in df_rescates_raw.columns:
-                    df_exitosos_kpi = df_rescates_raw[df_rescates_raw['CATEGORIA'].str.contains("Inscrito Exitosamente", na=False, case=False)]
+                    df_exitosos_kpi = df_rescates_raw[df_rescates_raw['CATEGORIA'].str.contains("Inscrito Exitosamente", na=False, case=False)].copy()
                 else:
-                    df_exitosos_kpi = df_rescates_raw
+                    df_exitosos_kpi = df_rescates_raw.copy()
                     
                 total_rescates = len(df_exitosos_kpi)
                 mes_actual_str = pd.Timestamp.today().strftime('%Y-%m')
@@ -2479,13 +2479,21 @@ else:
             
                 with col_b:
                     st.markdown("#### 🏥 Rescates por Centro")
-                    if 'NOMBRE_CENTRO' in df_exitosos_kpi.columns:
+                    
+                    if 'NOMBRE_CENTRO' not in df_exitosos_kpi.columns:
+                        df_exitosos_kpi['NOMBRE_CENTRO'] = "Centro De Salud Familiar Chol Chol"
+                    else:
+                        df_exitosos_kpi['NOMBRE_CENTRO'] = df_exitosos_kpi['NOMBRE_CENTRO'].replace("", "Centro De Salud Familiar Chol Chol").fillna("Centro De Salud Familiar Chol Chol")
+                        
+                    if not df_exitosos_kpi.empty:
                         df_centros = df_exitosos_kpi['NOMBRE_CENTRO'].value_counts().reset_index()
                         df_centros.columns = ['NOMBRE_CENTRO', 'CANTIDAD']
                         fig_centros = px.pie(df_centros, names='NOMBRE_CENTRO', values='CANTIDAD', hole=0.5, color_discrete_sequence=px.colors.qualitative.Pastel)
                         fig_centros.update_traces(textposition='inside', textinfo='percent+label', pull=[0.05]*len(df_centros))
                         fig_centros.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', showlegend=False, margin=dict(l=0, r=0, t=30, b=0))
                         st.plotly_chart(fig_centros, width="stretch")
+                    else:
+                        st.info("No hay rescates exitosos registrados para graficar.")
             
                 st.markdown("#### 📈 Evolución Diaria de Rescates")
                 if not df_exitosos_kpi['FECHA_RESCATE_DT'].isna().all():
