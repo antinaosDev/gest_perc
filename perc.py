@@ -1649,7 +1649,7 @@ else:
                         try:
                             if not pd.isna(anio_ag) and str(anio_ag).strip():
                                 anio_int = int(float(anio_ag))
-                                max_anio = int(dem_info.get('max_anio_percapita', datetime.now().year))
+                                max_anio = int(APP_CONFIG.get('datos', {}).get('max_anio_percapita', datetime.now().year))
                                 if anio_int == max_anio:
                                     cant_str = f"{cant} (Prioritario)"
                                 else:
