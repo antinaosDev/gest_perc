@@ -169,6 +169,7 @@ def get_demographic_data(url_demographic, url_rescates, _client):
                 df_rechazo_reciente = df_rechazo_prev[(df_rechazo_prev['ANIO_NUM'] == max_anio_r) & (df_rechazo_prev['MES_NUM'] == max_mes_r)]
                 
                 dem_data['rechazos_previsionales'] = set(df_rechazo_reciente['RUT_CLEAN'].tolist())
+                dem_data['df_rechazo_prev'] = df_rechazo_reciente.copy()
         except: pass
 
         # 3. Rescates Manuales desde el archivo externo
@@ -1537,7 +1538,29 @@ else:
                         razon = ""
                         b_raw = APP_CONFIG.get('datos', {}).get('bajas_crudas', pd.DataFrame())
                         rut_clean = row.get('RUT_CLEAN', '')
-                        if not b_raw.empty and rut_clean != '':
+                        if estado_db == 'RECHAZO PREVISIONAL':
+                            r_df = APP_CONFIG.get('datos', {}).get('df_rechazo_prev', pd.DataFrame())
+                            if not r_df.empty and rut_clean != '':
+                                if 'RUT_CLEAN' in r_df.columns:
+                                    m_r = r_df[r_df['RUT_CLEAN'] == rut_clean]
+                                    if not m_r.empty:
+                                        r_row = m_r.iloc[0]
+                                        posibles = ['CAUSAL', 'MOTIVO', 'OBSERVACION', 'RECHAZO']
+                                        motivo_encontrado = ""
+                                        for p in posibles:
+                                            for c in r_df.columns:
+                                                if p in str(c).upper():
+                                                    val = str(r_row[c]).strip()
+                                                    if val and val not in ['NAN', 'NONE']:
+                                                        motivo_encontrado = val
+                                                        break
+                                            if motivo_encontrado:
+                                                break
+                                        if motivo_encontrado:
+                                            razon = f"Rechazo: {motivo_encontrado.title()}"
+                                        else:
+                                            razon = "Rechazo Previsional"
+                        elif not b_raw.empty and rut_clean != '':
                             if 'RUT_CLEAN' not in b_raw.columns and 'RUT' in b_raw.columns:
                                 b_raw['RUT_CLEAN'] = b_raw['RUT'].apply(normalize_rut)
                             if 'RUT_CLEAN' in b_raw.columns:
@@ -1557,11 +1580,6 @@ else:
                                                 razones.append(f"Otro Centro: {centro_nombre.title()}")
                                             else:
                                                 razones.append("Inscrito en Otro Centro")
-                                        elif estado_db == 'RECHAZO PREVISIONAL':
-                                            msg = f"Rechazo: {cat.title()}"
-                                            if obs and obs not in ['NAN', 'NONE', '']:
-                                                msg += f" - {obs.title()}"
-                                            razones.append(msg)
                                             
                                         if '[ACREDITA_DOMICILIO: SI]' in obs:
                                             razones.append("Acredita domicilio")
@@ -1575,13 +1593,13 @@ else:
                                                     v_date = pd.to_datetime(v_str + "-01")
                                                     dias_diff = (v_date - pd.to_datetime('today')).days
                                                     if dias_diff <= 0:
-                                                        razones.append(f"Bloqueo Inscripción Vencido (hace {abs(dias_diff)} días)")
+                                                        razones.append(f"Bloqueo de Inscripción Vencido (hace {abs(dias_diff)} días)")
                                                     else:
-                                                        razones.append(f"Bloqueo Inscripción hasta {v_date.strftime('%m/%Y')} (faltan {dias_diff} días)")
+                                                        razones.append(f"Bloqueo de Inscripción hasta {v_date.strftime('%m/%Y')} (faltan {dias_diff} días)")
                                                 except:
-                                                    razones.append(f"Bloqueo Inscripción {v_str}")
+                                                    razones.append(f"Bloqueo de Inscripción {v_str}")
                                             else:
-                                                razones.append("Bloqueo Inscripción")
+                                                razones.append("Bloqueo de Inscripción")
                                                 
                                         if not razones and obs and obs not in ['NAN', 'NONE', '']:
                                             razones.append(obs.title())
