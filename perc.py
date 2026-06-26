@@ -1540,10 +1540,16 @@ else:
                         rut_clean = row.get('RUT_CLEAN', '')
                         if estado_db == 'RECHAZO PREVISIONAL':
                             r_df = APP_CONFIG.get('datos', {}).get('df_rechazo_prev', pd.DataFrame())
-                            if not r_df.empty and rut_clean != '':
-                                if 'RUT_CLEAN' in r_df.columns:
+                            if r_df.empty:
+                                razon = "[DEBUG] r_df is empty (caché no recargada o error)"
+                            elif 'RUT_CLEAN' not in r_df.columns:
+                                razon = "[DEBUG] RUT_CLEAN not in r_df columns"
+                            else:
+                                if rut_clean != '':
                                     m_r = r_df[r_df['RUT_CLEAN'] == rut_clean]
-                                    if not m_r.empty:
+                                    if m_r.empty:
+                                        razon = f"[DEBUG] m_r is empty for {rut_clean}"
+                                    else:
                                         r_row = m_r.iloc[0]
                                         posibles = ['CAUSAL', 'MOTIVO', 'OBSERVACION', 'RECHAZO']
                                         motivo_encontrado = ""
@@ -1559,7 +1565,9 @@ else:
                                         if motivo_encontrado:
                                             razon = f"Rechazo: {motivo_encontrado.title()}"
                                         else:
-                                            razon = "Rechazo Previsional"
+                                            razon = "[DEBUG] Motivo no encontrado en columnas: " + ", ".join(r_df.columns)
+                                else:
+                                    razon = "[DEBUG] rut_clean is empty"
                         elif not b_raw.empty and rut_clean != '':
                             if 'RUT_CLEAN' not in b_raw.columns and 'RUT' in b_raw.columns:
                                 b_raw['RUT_CLEAN'] = b_raw['RUT'].apply(normalize_rut)
