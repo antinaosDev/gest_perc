@@ -256,8 +256,8 @@ def get_demographic_data(url_demographic, url_rescates, _client):
                                         
                         if es_captura_potencial:
                             capturas_potenciales.append(rut)
-                        elif 'ISAPRE' in cat:
-                            dem_data.setdefault('isapres_observacion', set()).add(rut)
+                        elif any(x in cat for x in ['ISAPRE', 'CAPREDENA', 'DIPRECA', 'FFAA', 'SISA']):
+                            dem_data.setdefault('fondos_perdidos', set()).add(rut)
                         elif 'CARENCIA' in cat or 'BLOQUEO' in cat:
                             dem_data.setdefault('carencias_observacion', set()).add(rut)
                         else:
@@ -430,7 +430,8 @@ def get_rescate_data(config):
             df.loc[(df['ESTADO_PERCAPITA'] == 'PENDIENTE INSCRIPCION') & (df['RUT_CLEAN'].isin(rechazos_previsionales)), 'ESTADO_PERCAPITA'] = 'RECHAZO PREVISIONAL'
             
             # Lógica manual sobreescribe:
-            df.loc[(df['ESTADO_PERCAPITA'].isin(['PENDIENTE INSCRIPCION', 'RECHAZO PREVISIONAL'])) & (df['RUT_CLEAN'].isin(isapres_observacion)), 'ESTADO_PERCAPITA'] = 'OBSERVACION ISAPRE TEMP'
+            fondos_perdidos = dem_info.get('fondos_perdidos', set())
+            df.loc[(df['ESTADO_PERCAPITA'].isin(['PENDIENTE INSCRIPCION', 'RECHAZO PREVISIONAL'])) & (df['RUT_CLEAN'].isin(fondos_perdidos)), 'ESTADO_PERCAPITA'] = 'FONDOS PERDIDOS'
             
             df.loc[(df['RUT_CLEAN'].isin(fallecidos_historicos)), 'ESTADO_PERCAPITA'] = 'FALLECIDO HISTORICO'
             
@@ -446,18 +447,13 @@ def get_rescate_data(config):
                 idx_captura = (df['ESTADO_PERCAPITA'] == 'CAPTURA POTENCIAL TEMP') & (df['TEMP_ANIO_AGENDA'] == max_anio_eval) & (df['CANT_ATENCIONES'] >= 3)
                 df.loc[idx_captura, 'ESTADO_PERCAPITA'] = 'CAPTURA POTENCIAL'
                 
-                # Observacion Isapre -> Captura si >= 3 atenciones
-                idx_isapre_captura = (df['ESTADO_PERCAPITA'] == 'OBSERVACION ISAPRE TEMP') & (df['TEMP_ANIO_AGENDA'] == max_anio_eval) & (df['CANT_ATENCIONES'] >= 3)
-                df.loc[idx_isapre_captura, 'ESTADO_PERCAPITA'] = 'CAPTURA POTENCIAL'
-                
-                df.loc[df['ESTADO_PERCAPITA'].isin(['FUGA RECURRENTE TEMP', 'CAPTURA POTENCIAL TEMP', 'OBSERVACION ISAPRE TEMP']), 'ESTADO_PERCAPITA'] = 'BAJA NO RECURRENTE'
+                df.loc[df['ESTADO_PERCAPITA'].isin(['FUGA RECURRENTE TEMP', 'CAPTURA POTENCIAL TEMP']), 'ESTADO_PERCAPITA'] = 'BAJA NO RECURRENTE'
             else:
                 df.loc[df['ESTADO_PERCAPITA'] == 'FUGA RECURRENTE TEMP', 'ESTADO_PERCAPITA'] = 'FUGA RECURRENTE'
                 df.loc[df['ESTADO_PERCAPITA'] == 'CAPTURA POTENCIAL TEMP', 'ESTADO_PERCAPITA'] = 'CAPTURA POTENCIAL'
-                df.loc[df['ESTADO_PERCAPITA'] == 'OBSERVACION ISAPRE TEMP', 'ESTADO_PERCAPITA'] = 'CAPTURA POTENCIAL'
 
-        # Filtrar solo pendientes, alertas, fugas, capturas y rechazos
-        df_rescate = df[df['ESTADO_PERCAPITA'].isin(["PENDIENTE INSCRIPCION", "ALERTA RECAPTURA", "FUGA RECURRENTE", "CAPTURA POTENCIAL", "RECHAZO PREVISIONAL"])].copy()
+        # Filtrar solo pendientes, alertas, fugas, capturas, rechazos y fondos perdidos
+        df_rescate = df[df['ESTADO_PERCAPITA'].isin(["PENDIENTE INSCRIPCION", "ALERTA RECAPTURA", "FUGA RECURRENTE", "CAPTURA POTENCIAL", "RECHAZO PREVISIONAL", "FONDOS PERDIDOS"])].copy()
         
         # Seleccionar columnas útiles (SIN INFO CLÍNICA)
         # Se elimina EDAD_NUM de la visualización, se usa solo EDAD_ACTUAL
@@ -1512,7 +1508,8 @@ else:
             'FUGA RECURRENTE': '🔄 Fugas Recurrentes',
             'ALERTA RECAPTURA': '🚨 Alertas de Recaptura',
             'CAPTURA POTENCIAL': '🟢 Capturas Potenciales',
-            'RECHAZO PREVISIONAL': '⚠️ Rechazos Previsionales'
+            'RECHAZO PREVISIONAL': '⚠️ Rechazos Previsionales',
+            'FONDOS PERDIDOS': '💸 Fondos Perdidos (Isapres/FFAA)'
         }
         
         hay_datos = False
@@ -1524,12 +1521,19 @@ else:
                     hay_datos = True
                     df_st_unique = df_st.drop_duplicates(subset=[rut_c])
                     st.markdown(f"**{label} ({len(df_st_unique)} pacientes):**")
+                    
+                    display_data = []
                     for _, row in df_st_unique.iterrows():
+                        rut_val = row.get('RUT', '')
                         nombre = row.get('NOMBRE_PACIENTE', 'Sin Nombre')
+                        cant = row.get('CANT_ATENCIONES', 0)
+                        f_cita = str(row.get('FECHA_AGENDADA', '')).split(' ')[0] if pd.notna(row.get('FECHA_AGENDADA')) else ""
+                        if f_cita in ['nan', 'None']: f_cita = ""
+                        poli = str(row.get('POLICLINICO', '')).replace('nan', '').replace('None', '')
+                        sector = str(row.get('SECTOR', '')).replace('nan', '').replace('None', '')
                         
                         razon = ""
-                        if estado_db == 'CAPTURA POTENCIAL':
-                            cant = row.get('CANT_ATENCIONES', 0)
+                        if estado_db in ['CAPTURA POTENCIAL', 'FONDOS PERDIDOS']:
                             b_raw = APP_CONFIG.get('datos', {}).get('bajas_crudas', pd.DataFrame())
                             rut_clean = row.get('RUT_CLEAN', '')
                             if not b_raw.empty and rut_clean != '':
@@ -1542,29 +1546,32 @@ else:
                                         cat = str(ultimo_registro.get('CATEGORIA', '')).upper()
                                         obs = str(ultimo_registro.get('OBSERVACION', '')).upper()
                                         
-                                        if 'ISAPRE' in cat:
-                                            razon = f" *(Paciente Isapre con {cant} atenciones)*"
+                                        if any(x in cat for x in ['ISAPRE', 'CAPREDENA', 'DIPRECA', 'FFAA', 'SISA']):
+                                            razon = f"Fondo: {cat}"
                                         elif '[ACREDITA_DOMICILIO: SI]' in obs:
-                                            razon = " *(Acredita cambio de domicilio)*"
+                                            razon = "Acredita domicilio"
                                         elif '[VENCE_BLOQUEO' in obs:
                                             import re
                                             m = re.search(r'\[VENCE_BLOQUEO:\s*(\d{4}-\d{2})\]', obs)
                                             v = m.group(1) if m else 'Fecha'
-                                            razon = f" *(Venció bloqueo de 1 año en {v})*"
-                                            if cant >= 3:
-                                                razon += f" y tiene {cant} atenciones"
-                            if not razon and cant >= 3:
-                                razon = f" *(Cumple {cant} atenciones en el año)*"
-                                
-                        f_cita = str(row.get('FECHA_AGENDADA', '')).split(' ')[0] if pd.notna(row.get('FECHA_AGENDADA')) else ""
-                        if f_cita in ['nan', 'None']: f_cita = ""
-                        poli = row.get('POLICLINICO', '')
-                        sector = row.get('SECTOR', '')
-                        extra_info = f" | {f_cita}" if f_cita else ""
-                        if poli and poli not in ['nan', 'None']: extra_info += f" | {poli}"
-                        if sector and sector not in ['nan', 'None']: extra_info += f" | Sector: {sector}"
-                                
-                        st.markdown(f"- `{row['RUT']}` - {nombre} <span style='color: #28a745; font-size: 0.85rem;'>{razon}</span> <span style='color: #666; font-size: 0.8rem;'>{extra_info}</span>", unsafe_allow_html=True)
+                                            razon = f"Vence bloqueo {v}"
+                        
+                        if not razon and cant >= 3:
+                            razon = "Cumple atenciones"
+                            
+                        display_data.append({
+                            "RUT": rut_val,
+                            "Paciente": nombre,
+                            "Atenciones (Año)": cant,
+                            "Fecha Cita": f_cita,
+                            "Sector": sector,
+                            "Policlínico": poli,
+                            "Observación / Condición": razon
+                        })
+                        
+                    if display_data:
+                        df_display = pd.DataFrame(display_data)
+                        st.dataframe(df_display, hide_index=True, use_container_width=True)
                     st.markdown("")
         
         if not hay_datos:
@@ -1804,12 +1811,10 @@ else:
             with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
                 df_export = df_sorted[cols_final_table].copy()
             
-                conteo_atenciones = df_export.groupby('RUT').size().reset_index(name='CANT_ATENCIONES')
-                df_export = df_export.merge(conteo_atenciones, on='RUT', how='left')
-            
                 cols_export = list(df_export.columns)
-                cols_export.insert(2, cols_export.pop(cols_export.index('CANT_ATENCIONES')))
-                df_export = df_export[cols_export]
+                if 'CANT_ATENCIONES' in cols_export:
+                    cols_export.insert(2, cols_export.pop(cols_export.index('CANT_ATENCIONES')))
+                    df_export = df_export[cols_export]
             
                 df_export.to_excel(writer, index=False, sheet_name='Nómina_Completa')
             
@@ -1818,9 +1823,8 @@ else:
                 else:
                     df_contacto = df_sorted.drop_duplicates(subset=['RUT'], keep='first').copy()
                 
-                cols_contacto = [c for c in ['RUT', 'NOMBRE_PACIENTE', 'TELEFONO', 'SECTOR', 'EDAD_ACTUAL', 'FECHA_AGENDADA', 'HORA_AGENDADA', 'NOMBRE_PROFESIONAL', 'MOTIVO_CONSULTA'] if c in df_contacto.columns]
+                cols_contacto = [c for c in ['RUT', 'NOMBRE_PACIENTE', 'TELEFONO', 'SECTOR', 'EDAD_ACTUAL', 'CANT_ATENCIONES', 'FECHA_AGENDADA', 'HORA_AGENDADA', 'NOMBRE_PROFESIONAL', 'MOTIVO_CONSULTA'] if c in df_contacto.columns]
                 df_contacto = df_contacto[cols_contacto]
-                df_contacto = df_contacto.merge(conteo_atenciones, on='RUT', how='left')
                 df_contacto.rename(columns={'FECHA_AGENDADA': 'ULTIMA_FECHA_AGENDADA', 'HORA_AGENDADA': 'ULTIMA_HORA_AGENDADA'}, inplace=True)
                 df_contacto.to_excel(writer, index=False, sheet_name='Contactabilidad_Únicos')
             
