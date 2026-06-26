@@ -1969,11 +1969,10 @@ else:
             tipo_registro = st.radio(
                 "¿A quién desea registrar hoy?",
                 options=[
-                    "👉 Seleccione una opción...",
                     "📅 A un paciente agendado (Seleccionar de la lista de pendientes)", 
                     "🚶‍♂️ A un paciente espontáneo (Vino sin cita o no figura en la lista)"
                 ],
-                index=0
+                index=None
             )
             st.markdown("---")
             
@@ -1983,7 +1982,7 @@ else:
                 
                 rut_esp = st.text_input("RUT del Paciente (Ej: 12345678-9)", key="rut_esp").strip()
                 nombre_esp = st.text_input("Nombre Completo", key="nombre_esp").strip().upper()
-                centro_esp = st.selectbox("Centro de Salud", ["Centro De Salud Familiar Chol Chol", "Posta", "Otro"], key="centro_esp")
+                centro_esp = st.selectbox("Centro de Salud", ["Centro De Salud Familiar Chol Chol", "Posta De Salud Rural Malalche", "Posta De Salud Rural Huentelar", "Posta De Salud Rural Huamaqui"], key="centro_esp")
                 
                 cat_esp = st.selectbox("Categoría de Gestión*", [
                     "Inscrito Exitosamente (Nuevo Inscrito)", 
@@ -1994,7 +1993,7 @@ else:
                     "No Contesta / Inubicable",
                     "Rechaza Inscripción",
                     "Observación: Paciente Isapre",
-                    "Observación: Carencia / Bloqueo Fonasa",
+                    "Observación: Bloqueo Fonasa",
                     "Otro"
                 ], key="cat_esp")
                 
@@ -2078,7 +2077,11 @@ else:
                                         vence_dt_esp = fecha_inscrip_esp + pd.DateOffset(years=1)
                                         obs_final_esp = f"[VENCE_BLOQUEO: {vence_dt_esp.strftime('%Y-%m')}] {obs_final_esp}"
                             
-                            row_esp = [nombre_esp, centro_esp, rut_esp, anio_esp, mes_esp, cat_esp, obs_final_esp, fecha_rescate_esp, usuario_gestor_esp]
+                            rut_clean_str = rut_clean_esp
+                            if len(rut_clean_str) > 1:
+                                rut_clean_str = f"{rut_clean_str[:-1]}-{rut_clean_str[-1]}"
+                                
+                            row_esp = [nombre_esp, centro_esp, rut_clean_str, anio_esp, mes_esp, cat_esp, obs_final_esp, fecha_rescate_esp, usuario_gestor_esp]
                             ws_target_esp.append_row(row_esp)
                             
                             try:
@@ -2087,7 +2090,7 @@ else:
                                 ws_auditoria = sheet_rescates.add_worksheet(title="auditoria", rows="1000", cols="10")
                                 ws_auditoria.append_row(["FECHA_HORA_CL", "CUENTA", "ROL", "ACCION", "RUT_PACIENTE", "NOMBRE_PACIENTE", "CATEGORIA_GESTION", "OBSERVACION"])
                             
-                            ws_auditoria.append_row([fecha_rescate_esp, usuario_gestor_esp, rol_usuario_esp, "NUEVO REGISTRO ESPONTÁNEO", rut_esp, nombre_esp, cat_esp, obs_esp])
+                            ws_auditoria.append_row([fecha_rescate_esp, usuario_gestor_esp, rol_usuario_esp, "NUEVO REGISTRO ESPONTÁNEO", rut_clean_str, nombre_esp, cat_esp, obs_esp])
                             
                             st.success(f"✅ ¡Paciente Espontáneo {nombre_esp} registrado!")
                             st.cache_data.clear()
@@ -2169,7 +2172,7 @@ else:
                     if True: # Reemplazo de st.form para permitir actualización dinámica
                         c_f1, c_f2 = st.columns(2)
                         with c_f1:
-                            nombre = st.text_input("Nombres", value=paciente_data['NOMBRE_PACIENTE'])
+                            nombre = st.text_input("Nombres", value=paciente_data['NOMBRE_PACIENTE']).strip().upper()
                             opciones_centro = ["Centro De Salud Familiar Chol Chol", "Posta De Salud Rural Malalche", "Posta De Salud Rural Huentelar", "Posta De Salud Rural Huamaqui"]
                             centro_actual = paciente_data['NOMBRE_CENTRO'] if 'NOMBRE_CENTRO' in df_filtered.columns else ""
                             idx_centro = opciones_centro.index(centro_actual) if centro_actual in opciones_centro else 0
@@ -2196,7 +2199,7 @@ else:
                             "No Contesta / Inubicable",
                             "Rechaza Inscripción",
                             "Observación: Paciente Isapre",
-                            "Observación: Carencia / Bloqueo Fonasa",
+                            "Observación: Bloqueo Fonasa",
                             "Otro"
                         ])
                     
