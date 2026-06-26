@@ -1969,6 +1969,7 @@ else:
             tipo_registro = st.radio(
                 "¿A quién desea registrar hoy?",
                 options=[
+                    "👉 Seleccione una opción...",
                     "📅 A un paciente agendado (Seleccionar de la lista de pendientes)", 
                     "🚶‍♂️ A un paciente espontáneo (Vino sin cita o no figura en la lista)"
                 ],
@@ -2304,7 +2305,7 @@ else:
                                 st.rerun()
                             except Exception as e:
                                 st.error(f"❌ Error guardando datos: {e}")
-            else:
+            elif "Agendado" in tipo_registro:
                 st.warning("No hay pacientes pendientes con los filtros actuales para rescatar.")
 
     if show_tab5:
