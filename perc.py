@@ -62,6 +62,35 @@ BOOTSTRAP_CREDS = dict(st.secrets["gcp_service_account"])
 # 1. FUNCIONES BACKEND
 # -----------------------------------------------------------------------------
 
+def log_audit_action(accion, rut="-", nombre="-", categoria="-", obs="-"):
+    """Registra una accion arbitraria en la hoja de auditoria."""
+    try:
+        import gspread
+        from google.oauth2.service_account import Credentials
+        import pytz
+        from datetime import datetime
+        scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+        creds = Credentials.from_service_account_info(BOOTSTRAP_CREDS, scopes=scope)
+        client = gspread.authorize(creds)
+        sheet = client.open_by_url(URL_RESCATES)
+        stgo_tz = pytz.timezone('America/Santiago')
+        fecha = datetime.now(stgo_tz).strftime("%Y-%m-%d %H:%M:%S")
+        
+        try:
+            rol = APP_CONFIG.get('rol', 'SIN_ROL')
+        except:
+            rol = st.session_state.get('simulated_role', 'SIN_ROL')
+            
+        try:
+            ws_auditoria = sheet.worksheet("auditoria")
+        except gspread.exceptions.WorksheetNotFound:
+            ws_auditoria = sheet.add_worksheet(title="auditoria", rows="1000", cols="10")
+            ws_auditoria.append_row(["FECHA_HORA_CL", "CUENTA", "ROL", "ACCION", "RUT_PACIENTE", "NOMBRE_PACIENTE", "CATEGORIA_GESTION", "OBSERVACION"])
+            
+        ws_auditoria.append_row([fecha, MASTER_ACCOUNT_ID, rol, accion, rut, nombre, categoria, obs])
+    except Exception as e:
+        print(f"Error en log_audit_action: {e}")
+
 def procesar_imagen_drive(url_drive, creds_dict=None):
     """Procesa URLs de Google Drive para obtener contenido visualizable."""
     if not url_drive or len(url_drive) < 10: return None
@@ -1116,6 +1145,7 @@ with st.sidebar:
     st.markdown("---")
     
     if st.button("🚪 Cerrar Sesión", key="btn_logout", width='stretch'):
+        log_audit_action("CERRAR SESION")
         st.session_state.clear()
         st.rerun()
 
@@ -1253,7 +1283,7 @@ if app_mode == "📊 Análisis Archivo Percápita":
                                                         df_procesado.loc[idx, 'EDAD'] = hoy.year - nueva_fecha.year - ((hoy.month, hoy.day) < (nueva_fecha.month, nueva_fecha.day))
                                             if df_procesado['FECHA_NACIMIENTO'].isnull().sum() == 0: st.success("✅ ¡Fechas corregidas!")
                                         df_descarga_csv = df_procesado[columnas_seleccionadas].copy() if columnas_seleccionadas else df_procesado.copy()
-                                        st.download_button(label="📥 Descargar CSV Consolidado", data=convert_df_to_csv(df_descarga_csv), file_name=f'Inscritos_Percapita_{mes_corte_seleccionado}.csv', mime='text/csv', width='stretch')
+                                        st.download_button(label="📥 Descargar CSV Consolidado", data=convert_df_to_csv(df_descarga_csv), file_name=f'Inscritos_Percapita_{mes_corte_seleccionado}.csv', mime='text/csv', width='stretch', on_click=log_audit_action, args=("DESCARGAR CSV CONSOLIDADO",))
                                         
                                         df_estadistico = df_procesado.copy()
                                         if columnas_seleccionadas:
@@ -1274,7 +1304,7 @@ if app_mode == "📊 Análisis Archivo Percápita":
                                             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                                                 df_estadistico.to_excel(writer, index=False, sheet_name='Estadisticas')
                                             excel_data = output.getvalue()
-                                            st.download_button(label="📊 Descargar Reporte Estadístico (Excel)", data=excel_data, file_name=f'Estadistica_{mes_corte_seleccionado}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', width='stretch')
+                                            st.download_button(label="📊 Descargar Reporte Estadístico (Excel)", data=excel_data, file_name=f'Estadistica_{mes_corte_seleccionado}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', width='stretch', on_click=log_audit_action, args=("DESCARGAR REPORTE ESTADISTICO",))
                                         except Exception as e: st.error(f"Error generando Excel: {e}")
                         else: st.warning("No hay datos.")
 
@@ -1295,7 +1325,7 @@ if app_mode == "📊 Análisis Archivo Percápita":
                         cols_fall = df_filtrado_f.columns.tolist()
                         sel_cols_fall = st.multiselect("Columnas a exportar (Fallecidos):", options=cols_fall, default=cols_fall, key="cols_fall")
                         if sel_cols_fall:
-                            st.download_button(label="Descargar Nómina Fallecidos", data=convert_df_to_csv(df_filtrado_f[sel_cols_fall]), file_name="Fallecidos.csv", mime="text/csv", width='stretch')
+                            st.download_button(label="Descargar Nómina Fallecidos", data=convert_df_to_csv(df_filtrado_f[sel_cols_fall]), file_name="Fallecidos.csv", mime="text/csv", width='stretch', on_click=log_audit_action, args=("DESCARGAR NOMINA FALLECIDOS",))
                 else: st.warning("Sin datos de fallecidos.")
 
         with tab3_p:
@@ -1315,7 +1345,7 @@ if app_mode == "📊 Análisis Archivo Percápita":
                         cols_rech = df_filtrado_r.columns.tolist()
                         sel_cols_rech = st.multiselect("Columnas a exportar (Rechazados):", options=cols_rech, default=cols_rech, key="cols_rech")
                         if sel_cols_rech:
-                            st.download_button(label="Descargar Nómina Rechazados", data=convert_df_to_csv(df_filtrado_r[sel_cols_rech]), file_name="Rechazados_Previsionales.csv", mime="text/csv", width='stretch')
+                            st.download_button(label="Descargar Nómina Rechazados", data=convert_df_to_csv(df_filtrado_r[sel_cols_rech]), file_name="Rechazados_Previsionales.csv", mime="text/csv", width='stretch', on_click=log_audit_action, args=("DESCARGAR NOMINA RECHAZADOS",))
                 else: st.warning("Sin datos de rechazados previsionales.")
 
         with tab4_p:
@@ -1451,7 +1481,10 @@ with st.expander("ℹ️ Acerca de la Plataforma y Guía de Estados", expanded=F
 if df_rescate.empty:
     st.balloons()
     st.success("🎉 ¡Sin brechas! Todos los pacientes atendidos figuran inscritos.")
-    if st.button("Recargar"): st.cache_data.clear(); st.rerun()
+    if st.button("Recargar"): 
+        log_audit_action("RECARGAR DASHBOARD")
+        st.cache_data.clear()
+        st.rerun()
 else:
     if 'ESTADO' in df_rescate.columns:
         df_rescate['ESTADO'] = df_rescate['ESTADO'].fillna("NO INFORMADO")
@@ -2006,6 +2039,7 @@ else:
             )
 
             if st.button("🔄 Forzar Actualización desde la Nube"): 
+                log_audit_action("FORZAR ACTUALIZACION DESDE NUBE")
                 st.cache_data.clear()
                 st.rerun()
 
@@ -2396,6 +2430,7 @@ else:
                 filtro_mes = st.selectbox("Mes de Evaluación", meses_disp, index=meses_disp.index(def_mes_nombre) if def_mes_nombre in meses_disp else 0)
             
             if st.button("🔄 Sincronizar con Base de Datos"):
+                log_audit_action("SINCRONIZAR BASE DE DATOS")
                 st.cache_data.clear()
                 st.rerun()
             
