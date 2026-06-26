@@ -278,9 +278,9 @@ def get_demographic_data(url_demographic, url_rescates, _client):
     except: pass
     return dem_data
 
-@st.cache_data(ttl=600, show_spinner=False)
+@st.cache_data(ttl=599, show_spinner=False)
 def load_app_configuration(account_id):
-    """Carga configuración y LOGOS desde Admin."""
+    """Carga configuración y LOGOS desde Admin. (Cache busted)"""
     config = {'valido': False, 'mensaje': '', 'datos': {}, 'credenciales': None, 'imagenes': {}}
     try:
         scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
