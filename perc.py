@@ -1553,6 +1553,7 @@ else:
                         nombre = row.get('NOMBRE_PACIENTE', 'Sin Nombre')
                         edad = str(row.get('EDAD_ACTUAL', '')).replace('nan', '').replace('None', '')
                         cant = row.get('CANT_ATENCIONES', 0)
+                        anio_ag = row.get('TEMP_ANIO_AGENDA', None)
                         f_cita = str(row.get('FECHA_AGENDADA', '')).split(' ')[0] if pd.notna(row.get('FECHA_AGENDADA')) else ""
                         if f_cita in ['nan', 'None']: f_cita = ""
                         telefono = str(row.get('TELEFONO', '')).replace('nan', '').replace('None', '')
@@ -1643,12 +1644,20 @@ else:
                         if not razon and cant >= 3:
                             razon = "Tiene 3 o más atenciones"
                             
+                        # Priorización visual
+                        if not pd.isna(anio_ag) and int(anio_ag) == int(dem_info.get('max_anio_percapita', datetime.now().year)):
+                            cant_str = f"🔥 {cant} (Prioritario)"
+                        elif not pd.isna(anio_ag):
+                            cant_str = f"{cant} (Año {int(anio_ag)})"
+                        else:
+                            cant_str = str(cant)
+                            
                         display_data.append({
                             "RUT": rut_val,
                             "Paciente": nombre,
                             "Edad": edad,
                             "Teléfono": telefono,
-                            "Atenciones (Año)": cant,
+                            "Atenciones (Año)": cant_str,
                             "Fecha Cita": f_cita,
                             "Motivo Consulta": motivo,
                             "Observación / Condición": razon
