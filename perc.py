@@ -2433,9 +2433,14 @@ else:
                     df_rescates_raw['FECHA_RESCATE_DT'] = pd.NaT
                     df_rescates_raw['MES_RESCATE'] = 'Sin Fecha'
                 
-                total_rescates = len(df_rescates_raw)
+                if 'CATEGORIA' in df_rescates_raw.columns:
+                    df_exitosos_kpi = df_rescates_raw[df_rescates_raw['CATEGORIA'].str.contains("Inscrito Exitosamente", na=False, case=False)]
+                else:
+                    df_exitosos_kpi = df_rescates_raw
+                    
+                total_rescates = len(df_exitosos_kpi)
                 mes_actual_str = pd.Timestamp.today().strftime('%Y-%m')
-                rescates_este_mes = df_rescates_raw[df_rescates_raw['MES_RESCATE'] == mes_actual_str].shape[0] if not df_rescates_raw.empty else 0
+                rescates_este_mes = df_exitosos_kpi[df_exitosos_kpi['MES_RESCATE'] == mes_actual_str].shape[0] if not df_exitosos_kpi.empty else 0
             
                 c1, c2, c3 = st.columns(3)
                 with c1:
@@ -2443,7 +2448,7 @@ else:
                 with c2:
                     st.metric(label="Rescates Este Mes", value=rescates_este_mes)
                 with c3:
-                    gestores_unicos = df_rescates_raw['USUARIO_GESTOR'].nunique() if 'USUARIO_GESTOR' in df_rescates_raw.columns else 0
+                    gestores_unicos = df_exitosos_kpi['USUARIO_GESTOR'].nunique() if 'USUARIO_GESTOR' in df_exitosos_kpi.columns else 0
                     st.metric(label="Gestores Activos", value=gestores_unicos)
                 
                 st.markdown("---")
@@ -2451,8 +2456,15 @@ else:
             
                 with col_a:
                     st.markdown("#### 📊 Gestiones por Categoría")
-                    if 'CATEGORIA' in df_rescates_raw.columns:
-                        df_cat = df_rescates_raw['CATEGORIA'].value_counts().reset_index()
+                    
+                    df_combined_cat = pd.DataFrame()
+                    if not df_rescates_raw.empty and 'CATEGORIA' in df_rescates_raw.columns:
+                        df_combined_cat = pd.concat([df_combined_cat, df_rescates_raw[['CATEGORIA']]])
+                    if not df_bajas_raw.empty and 'CATEGORIA' in df_bajas_raw.columns:
+                        df_combined_cat = pd.concat([df_combined_cat, df_bajas_raw[['CATEGORIA']]])
+                        
+                    if not df_combined_cat.empty:
+                        df_cat = df_combined_cat['CATEGORIA'].value_counts().reset_index()
                         df_cat.columns = ['CATEGORIA', 'CANTIDAD']
                         
                         fig_cat = px.bar(df_cat, x='CANTIDAD', y='CATEGORIA', orientation='h', color='CANTIDAD', color_continuous_scale="Blues", text='CANTIDAD')
@@ -2470,8 +2482,8 @@ else:
             
                 with col_b:
                     st.markdown("#### 🏥 Rescates por Centro")
-                    if 'NOMBRE_CENTRO' in df_rescates_raw.columns:
-                        df_centros = df_rescates_raw['NOMBRE_CENTRO'].value_counts().reset_index()
+                    if 'NOMBRE_CENTRO' in df_exitosos_kpi.columns:
+                        df_centros = df_exitosos_kpi['NOMBRE_CENTRO'].value_counts().reset_index()
                         df_centros.columns = ['NOMBRE_CENTRO', 'CANTIDAD']
                         fig_centros = px.pie(df_centros, names='NOMBRE_CENTRO', values='CANTIDAD', hole=0.5, color_discrete_sequence=px.colors.qualitative.Pastel)
                         fig_centros.update_traces(textposition='inside', textinfo='percent+label', pull=[0.05]*len(df_centros))
@@ -2479,9 +2491,10 @@ else:
                         st.plotly_chart(fig_centros, width="stretch")
             
                 st.markdown("#### 📈 Evolución Diaria de Rescates")
-                if not df_rescates_raw['FECHA_RESCATE_DT'].isna().all():
-                    df_rescates_raw['FECHA_DIA'] = df_rescates_raw['FECHA_RESCATE_DT'].dt.strftime('%d-%m-%Y')
-                    df_tiempo = df_rescates_raw.groupby('FECHA_DIA').size().reset_index(name='CANTIDAD')
+                if not df_exitosos_kpi['FECHA_RESCATE_DT'].isna().all():
+                    df_exitosos_kpi = df_exitosos_kpi.copy()
+                    df_exitosos_kpi['FECHA_DIA'] = df_exitosos_kpi['FECHA_RESCATE_DT'].dt.strftime('%d-%m-%Y')
+                    df_tiempo = df_exitosos_kpi.groupby('FECHA_DIA').size().reset_index(name='CANTIDAD')
                     # Convert back to datetime just for sorting chronologically, then back to string
                     df_tiempo['FECHA_SORT'] = pd.to_datetime(df_tiempo['FECHA_DIA'], format='%d-%m-%Y')
                     df_tiempo = df_tiempo.sort_values('FECHA_SORT')
