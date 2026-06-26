@@ -1645,12 +1645,17 @@ else:
                             razon = "Tiene 3 o más atenciones"
                             
                         # Priorización visual
-                        if not pd.isna(anio_ag) and int(anio_ag) == int(dem_info.get('max_anio_percapita', datetime.now().year)):
-                            cant_str = f"🔥 {cant} (Prioritario)"
-                        elif not pd.isna(anio_ag):
-                            cant_str = f"{cant} (Año {int(anio_ag)})"
-                        else:
-                            cant_str = str(cant)
+                        cant_str = str(cant)
+                        try:
+                            if not pd.isna(anio_ag) and str(anio_ag).strip():
+                                anio_int = int(float(anio_ag))
+                                max_anio = int(dem_info.get('max_anio_percapita', datetime.now().year))
+                                if anio_int == max_anio:
+                                    cant_str = f"{cant} (Prioritario)"
+                                else:
+                                    cant_str = f"{cant} (Año {anio_int})"
+                        except:
+                            pass
                             
                         display_data.append({
                             "RUT": rut_val,
