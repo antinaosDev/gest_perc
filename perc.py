@@ -1664,9 +1664,18 @@ else:
                                                     v_date = pd.to_datetime(v_str + "-01")
                                                     dias_diff = (v_date - pd.to_datetime('today')).days
                                                     if dias_diff <= 0:
-                                                        razones.append(f"Bloqueo de Inscripción Vencido (hace {abs(dias_diff)} días)")
+                                                        dias_vencido = abs(dias_diff)
+                                                        if dias_vencido <= 30:
+                                                            razones.append(f"⚡ Bloqueo de Inscripción Vencido (hace {dias_vencido} días)")
+                                                        elif dias_vencido <= 90:
+                                                            razones.append(f"🟡 Bloqueo de Inscripción Vencido (hace {dias_vencido} días)")
+                                                        else:
+                                                            razones.append(f"🟢 Bloqueo de Inscripción Vencido (hace {dias_vencido} días)")
                                                     else:
-                                                        razones.append(f"Bloqueo de Inscripción hasta {v_date.strftime('%m/%Y')} (faltan {dias_diff} días)")
+                                                        if dias_diff <= 45:
+                                                            razones.append(f"⏳ Bloqueo de Inscripción hasta {v_date.strftime('%m/%Y')} (faltan {dias_diff} días)")
+                                                        else:
+                                                            razones.append(f"Bloqueo de Inscripción hasta {v_date.strftime('%m/%Y')} (faltan {dias_diff} días)")
                                                 except:
                                                     razones.append(f"Bloqueo de Inscripción {v_str}")
                                             else:
@@ -2572,6 +2581,11 @@ else:
             - **Sin Bloqueo:** Un beneficiario puede cambiarse de centro libremente si ha transcurrido **un año o más** desde su última inscripción.
             - **Con Bloqueo (Menos de un año):** El sistema rechazará el cambio a menos que el paciente demuestre un cambio de domicilio (laboral o particular) presentando un **documento fidedigno**.
             - **¿Qué es un documento fidedigno?** Certificado de residencia, contrato de trabajo, cuentas a nombre del paciente (luz, agua), certificado indígena. Se deben registrar: Entidad Emisora, Fecha, Número y Firmante.
+            - **Simbología de Prioridades de Bloqueo (Semáforo):**
+              - ⚡ **Bloqueo Vencido Reciente (30 días o menos):** **Prioridad Alta.** El bloqueo acaba de expirar. Es crítico contactar al paciente rápido para inscribirlo antes de que sea capturado por otro centro.
+              - 🟡 **Bloqueo Vencido Intermedio (31 a 90 días):** **Prioridad Media.** El bloqueo venció hace poco.
+              - 🟢 **Bloqueo Vencido Estable (Más de 90 días):** **Prioridad Baja/Estable.** El bloqueo venció hace bastante tiempo; es un paciente seguro para gestionar la reinscripción.
+              - ⏳ **Bloqueo Activo Próximo a Vencer (45 días o menos):** **En espera.** El paciente aún está bloqueado, pero el bloqueo expira pronto.
 
             #### 3. Plazos Anuales y Financiamiento
             Para calcular cuánto dinero recibirá el municipio al año siguiente, hay plazos estrictos:
