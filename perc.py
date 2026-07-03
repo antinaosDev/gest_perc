@@ -2135,13 +2135,13 @@ else:
                                         continue
                                     
                                     for idx in range(len(rows) - 1, 0, -1):  # Recorremos de atras hacia adelante (omitimos cabecera)
-                                        row = rows[idx]
-                                        if len(row) > 2:
-                                            sheet_rut = normalize_rut(row[2])
+                                        sheet_row = rows[idx]
+                                        if len(sheet_row) > 2:
+                                            sheet_rut = normalize_rut(sheet_row[2])
                                             if sheet_rut == rut_clean_esp:
                                                 # Validar alerta de 1 hora si tiene columna de fecha (columna 8, indice 7)
-                                                if len(row) > 7:
-                                                    fecha_reg_str = row[7]
+                                                if len(sheet_row) > 7:
+                                                    fecha_reg_str = sheet_row[7]
                                                     try:
                                                         fecha_reg = datetime.strptime(fecha_reg_str, "%Y-%m-%d %H:%M:%S")
                                                         fecha_reg = stgo_tz.localize(fecha_reg)
@@ -2375,9 +2375,9 @@ else:
                                         
                                         # Recorremos de atras hacia adelante para poder borrar filas sin alterar el indice
                                         for idx in range(len(rows) - 1, 0, -1):
-                                            row = rows[idx]
-                                            if len(row) > 2:
-                                                sheet_rut = normalize_rut(row[2])
+                                            sheet_row = rows[idx]
+                                            if len(sheet_row) > 2:
+                                                sheet_rut = normalize_rut(sheet_row[2])
                                                 if sheet_rut == rut_clean_val:
                                                     # Actualización de un registro antiguo. Borramos el antiguo sin importar la fecha.
                                                     ws_temp.delete_row(idx + 1)
