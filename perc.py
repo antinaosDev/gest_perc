@@ -2126,25 +2126,35 @@ else:
                             rut_clean_esp = normalize_rut(rut_esp)
                             fecha_ahora_esp = datetime.now(stgo_tz)
                             
+                            # PREVENCION DE DUPLICADOS EN TIEMPO REAL Y UPSERT (En ambas hojas)
                             for sheet_name in ["registro_rescates", "bajas_percapita"]:
                                 try:
                                     ws_temp = sheet_rescates.worksheet(sheet_name)
-                                    ruts_sheet = ws_temp.col_values(3)
+                                    rows = ws_temp.get_all_values()
+                                    if not rows:
+                                        continue
                                     
-                                    for idx in range(len(ruts_sheet)-1, -1, -1):
-                                        if normalize_rut(str(ruts_sheet[idx])) == rut_clean_esp:
-                                            fecha_reg_str = fechas_sheet[idx] if idx < len(fechas_sheet) else ""
-                                            try:
-                                                fecha_reg = datetime.strptime(fecha_reg_str, "%Y-%m-%d %H:%M:%S")
-                                                fecha_reg = stgo_tz.localize(fecha_reg)
-                                                if (fecha_ahora_esp - fecha_reg).total_seconds() < 3600:
-                                                    st.error(f"⚠️ ¡ALERTA! El paciente {rut_esp} acaba de ser gestionado por otro funcionario hace un momento. Actualizando base de datos...")
-                                                    st.cache_data.clear()
-                                                    time.sleep(3)
-                                                    st.rerun()
-                                            except: pass
-                                            ws_temp.delete_row(idx + 1)
-                                except: pass
+                                    for idx in range(len(rows) - 1, 0, -1):  # Recorremos de atras hacia adelante (omitimos cabecera)
+                                        row = rows[idx]
+                                        if len(row) > 2:
+                                            sheet_rut = normalize_rut(row[2])
+                                            if sheet_rut == rut_clean_esp:
+                                                # Validar alerta de 1 hora si tiene columna de fecha (columna 8, indice 7)
+                                                if len(row) > 7:
+                                                    fecha_reg_str = row[7]
+                                                    try:
+                                                        fecha_reg = datetime.strptime(fecha_reg_str, "%Y-%m-%d %H:%M:%S")
+                                                        fecha_reg = stgo_tz.localize(fecha_reg)
+                                                        if (fecha_ahora_esp - fecha_reg).total_seconds() < 3600:
+                                                            st.error(f"⚠️ ¡ALERTA! El paciente {rut_esp} acaba de ser gestionado por otro funcionario hace un momento. Actualizando base de datos...")
+                                                            st.cache_data.clear()
+                                                            time.sleep(3)
+                                                            st.rerun()
+                                                    except:
+                                                        pass
+                                                ws_temp.delete_row(idx + 1)
+                                except:
+                                    pass
                             
                             try:
                                 ws_target_esp = sheet_rescates.worksheet(target_sheet_name_esp)
@@ -2170,17 +2180,6 @@ else:
                             rut_clean_str = rut_clean_esp
                             if len(rut_clean_str) > 1:
                                 rut_clean_str = f"{rut_clean_str[:-1]}-{rut_clean_str[-1]}"
-                                
-                            rut_clean_val = normalize_rut(rut_clean_str)
-                            
-                            for sheet_name in ["registro_rescates", "bajas_percapita"]:
-                                try:
-                                    ws_temp = sheet_rescates.worksheet(sheet_name)
-                                    ruts_sheet = ws_temp.col_values(3)
-                                    for idx in range(len(ruts_sheet)-1, -1, -1):
-                                        if normalize_rut(str(ruts_sheet[idx])) == rut_clean_val:
-                                            ws_temp.delete_row(idx + 1)
-                                except: pass
                                 
                             row_esp = [nombre_esp, centro_esp, rut_clean_str, anio_esp, mes_esp, cat_esp, obs_final_esp, fecha_rescate_esp, usuario_gestor_esp]
                             ws_target_esp.append_row(row_esp)
@@ -2370,14 +2369,18 @@ else:
                                 for sheet_name in ["registro_rescates", "bajas_percapita"]:
                                     try:
                                         ws_temp = sheet_rescates.worksheet(sheet_name)
-                                        ruts_sheet = ws_temp.col_values(3)
-                                        fechas_sheet = ws_temp.col_values(8)
+                                        rows = ws_temp.get_all_values()
+                                        if not rows:
+                                            continue
                                         
                                         # Recorremos de atras hacia adelante para poder borrar filas sin alterar el indice
-                                        for idx in range(len(ruts_sheet)-1, -1, -1):
-                                            if normalize_rut(str(ruts_sheet[idx])) == rut_clean_val:
-                                                # Actualización de un registro antiguo. Borramos el antiguo sin importar la fecha.
-                                                ws_temp.delete_row(idx + 1)
+                                        for idx in range(len(rows) - 1, 0, -1):
+                                            row = rows[idx]
+                                            if len(row) > 2:
+                                                sheet_rut = normalize_rut(row[2])
+                                                if sheet_rut == rut_clean_val:
+                                                    # Actualización de un registro antiguo. Borramos el antiguo sin importar la fecha.
+                                                    ws_temp.delete_row(idx + 1)
                                     except: pass
                                     
                                 ws_target.append_row(row)
