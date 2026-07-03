@@ -319,7 +319,7 @@ def get_demographic_data(url_demographic, url_rescates, _client):
                                 dem_data.setdefault('capturas_manuales', set()).add(rut)
                         elif any(x in cat or x in obs.upper() for x in ['ISAPRE', 'CAPREDENA', 'DIPRECA', 'FFAA', 'SISA']):
                             dem_data.setdefault('fondos_perdidos', set()).add(rut)
-                        elif 'CARENCIA' in cat or 'BLOQUEO' in cat or 'CARENCIA' in obs.upper() or 'BLOQUEO' in obs.upper():
+                        elif 'CARENCIA' in cat or 'BLOQUEO' in cat or 'CARENCIA' in obs.upper() or ('BLOQUEO' in obs.upper() and 'VENCE_BLOQUEO' not in obs.upper()):
                             dem_data.setdefault('carencias_observacion', set()).add(rut)
                         else:
                             fugas_recurrentes.append(rut)
