@@ -299,9 +299,9 @@ def get_demographic_data(url_demographic, url_rescates, _client):
                             fecha_rescate = str(row.get('FECHA_RESCATE', '')).strip()
                             if fecha_rescate and fecha_rescate.lower() not in ['nan', 'none']:
                                 dem_data.setdefault('capturas_manuales', set()).add(rut)
-                        elif any(x in cat for x in ['ISAPRE', 'CAPREDENA', 'DIPRECA', 'FFAA', 'SISA']):
+                        elif any(x in cat or x in obs.upper() for x in ['ISAPRE', 'CAPREDENA', 'DIPRECA', 'FFAA', 'SISA']):
                             dem_data.setdefault('fondos_perdidos', set()).add(rut)
-                        elif 'CARENCIA' in cat or 'BLOQUEO' in cat:
+                        elif 'CARENCIA' in cat or 'BLOQUEO' in cat or 'CARENCIA' in obs.upper() or 'BLOQUEO' in obs.upper():
                             dem_data.setdefault('carencias_observacion', set()).add(rut)
                         else:
                             fugas_recurrentes.append(rut)
@@ -478,6 +478,9 @@ def get_rescate_data(config):
             # Lógica manual sobreescribe:
             fondos_perdidos = dem_info.get('fondos_perdidos', set())
             df.loc[(df['ESTADO_PERCAPITA'].isin(['PENDIENTE INSCRIPCION', 'RECHAZO PREVISIONAL'])) & (df['RUT_CLEAN'].isin(fondos_perdidos)), 'ESTADO_PERCAPITA'] = 'FONDOS PERDIDOS'
+            
+            carencias_observacion = dem_info.get('carencias_observacion', set())
+            df.loc[(df['ESTADO_PERCAPITA'].isin(['PENDIENTE INSCRIPCION', 'RECHAZO PREVISIONAL'])) & (df['RUT_CLEAN'].isin(carencias_observacion)), 'ESTADO_PERCAPITA'] = 'RECHAZO PREVISIONAL'
             
             df.loc[(df['RUT_CLEAN'].isin(fallecidos_historicos)), 'ESTADO_PERCAPITA'] = 'FALLECIDO HISTORICO'
             
@@ -1601,34 +1604,44 @@ else:
                         rut_clean = row.get('RUT_CLEAN', '')
                         if estado_db == 'RECHAZO PREVISIONAL':
                             r_df = APP_CONFIG.get('datos', {}).get('df_rechazo_prev', pd.DataFrame())
-                            if r_df.empty:
-                                razon = "[DEBUG] r_df is empty (caché no recargada o error)"
-                            elif 'RUT_CLEAN' not in r_df.columns:
-                                razon = "[DEBUG] RUT_CLEAN not in r_df columns"
-                            else:
-                                if rut_clean != '':
-                                    m_r = r_df[r_df['RUT_CLEAN'] == rut_clean]
-                                    if m_r.empty:
-                                        razon = f"[DEBUG] m_r is empty for {rut_clean}"
-                                    else:
-                                        r_row = m_r.iloc[0]
-                                        posibles = ['CAUSAL', 'MOTIVO', 'OBSERVACION', 'RECHAZO']
-                                        motivo_encontrado = ""
-                                        for p in posibles:
-                                            for c in r_df.columns:
-                                                if p in str(c).upper():
-                                                    val = str(r_row[c]).strip()
-                                                    if val and val not in ['NAN', 'NONE']:
-                                                        motivo_encontrado = val
-                                                        break
+                            found_in_prev = False
+                            if not r_df.empty and 'RUT_CLEAN' in r_df.columns and rut_clean != '':
+                                m_r = r_df[r_df['RUT_CLEAN'] == rut_clean]
+                                if not m_r.empty:
+                                    r_row = m_r.iloc[0]
+                                    posibles = ['CAUSAL', 'MOTIVO', 'OBSERVACION', 'RECHAZO']
+                                    motivo_encontrado = ""
+                                    for p in posibles:
+                                        for c in r_df.columns:
+                                            if p in str(c).upper():
+                                                val = str(r_row[c]).strip()
+                                                if val and val not in ['NAN', 'NONE']:
+                                                    motivo_encontrado = val
+                                                    break
                                             if motivo_encontrado:
                                                 break
                                         if motivo_encontrado:
-                                            razon = f"Rechazo: {motivo_encontrado.title()}"
-                                        else:
-                                            razon = "[DEBUG] Motivo no encontrado en columnas: " + ", ".join(r_df.columns)
-                                else:
-                                    razon = "[DEBUG] rut_clean is empty"
+                                            break
+                                    if motivo_encontrado:
+                                        razon = f"Rechazo: {motivo_encontrado.title()}"
+                                        found_in_prev = True
+                                        
+                            if not found_in_prev:
+                                # Buscar en bajas_crudas (Carencia/Bloqueo Fonasa manual)
+                                if not b_raw.empty and rut_clean != '':
+                                    if 'RUT_CLEAN' not in b_raw.columns and 'RUT' in b_raw.columns:
+                                        b_raw['RUT_CLEAN'] = b_raw['RUT'].apply(normalize_rut)
+                                    if 'RUT_CLEAN' in b_raw.columns:
+                                        match_baja = b_raw[b_raw['RUT_CLEAN'] == rut_clean]
+                                        if not match_baja.empty:
+                                            ultimo_registro = match_baja.iloc[-1]
+                                            cat = str(ultimo_registro.get('CATEGORIA', '')).upper()
+                                            obs = str(ultimo_registro.get('OBSERVACION', '')).upper()
+                                            razon = f"Bloqueo: {cat}" if not obs else f"Bloqueo: {obs}"
+                                            found_in_prev = True
+                                            
+                            if not found_in_prev:
+                                razon = "Causal de rechazo no encontrada"
                         elif not b_raw.empty and rut_clean != '':
                             if 'RUT_CLEAN' not in b_raw.columns and 'RUT' in b_raw.columns:
                                 b_raw['RUT_CLEAN'] = b_raw['RUT'].apply(normalize_rut)
