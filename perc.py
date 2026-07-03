@@ -120,7 +120,16 @@ def get_demographic_data(url_demographic, url_rescates, _client):
     dem_data = {'sector': pd.DataFrame(), 'percapita': pd.DataFrame()}
     try:
         if not url_demographic or len(url_demographic) < 10: return dem_data
-        sheet_dem = _client.open_by_url(url_demographic)
+        import time
+        sheet_dem = None
+        for attempt in range(3):
+            try:
+                sheet_dem = _client.open_by_url(url_demographic)
+                break
+            except Exception as e_dem:
+                if attempt == 2:
+                    raise e_dem
+                time.sleep(1.5)
         
         # 1. Sector
         try:
@@ -205,7 +214,16 @@ def get_demographic_data(url_demographic, url_rescates, _client):
         try:
             if not url_rescates or len(url_rescates) < 10:
                 raise ValueError("URL Rescates vacía o inválida")
-            sheet_rescates = _client.open_by_url(url_rescates)
+            import time
+            sheet_rescates = None
+            for attempt in range(3):
+                try:
+                    sheet_rescates = _client.open_by_url(url_rescates)
+                    break
+                except Exception as e_resc:
+                    if attempt == 2:
+                        raise e_resc
+                    time.sleep(1.5)
             try:
                 ws_rescates = sheet_rescates.worksheet("registro_rescates")
                 data_rescates = ws_rescates.get_all_records()
@@ -331,10 +349,17 @@ def load_app_configuration(account_id):
         scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(BOOTSTRAP_CREDS, scopes=scope)
         client = gspread.authorize(creds)
-        sheet_admin = client.open_by_url(URL_ADMIN_MASTER).sheet1
-        
-        # Obtenemos los valores manualmente para evitar el error de headers duplicados en gspread
-        raw_data = sheet_admin.get_all_values()
+        import time
+        raw_data = None
+        for attempt in range(3):
+            try:
+                sheet_admin = client.open_by_url(URL_ADMIN_MASTER).sheet1
+                raw_data = sheet_admin.get_all_values()
+                break
+            except Exception as sheet_err:
+                if attempt == 2:
+                    raise sheet_err
+                time.sleep(1.5)
         if not raw_data:
             config['mensaje'] = "La hoja está vacía."
             return config
@@ -432,8 +457,17 @@ def get_rescate_data(config):
         creds = Credentials.from_service_account_info(config['credenciales'], scopes=scope)
         client = gspread.authorize(creds)
         
-        sheet = client.open_by_url(config['datos']['URL_SHEET']).sheet1
-        data = sheet.get_all_values()
+        import time
+        data = None
+        for attempt in range(3):
+            try:
+                sheet = client.open_by_url(config['datos']['URL_SHEET']).sheet1
+                data = sheet.get_all_values()
+                break
+            except Exception as sheet_err:
+                if attempt == 2:
+                    raise sheet_err
+                time.sleep(1.5)
         df = pd.DataFrame(data[1:], columns=data[0])
         df.columns = df.columns.str.strip()
         
