@@ -471,6 +471,9 @@ def get_rescate_data(config):
         df = pd.DataFrame(data[1:], columns=data[0])
         df.columns = df.columns.str.strip()
         
+        if 'RUT' in df.columns:
+            df = df[df['RUT'].astype(str).str.strip() != '']
+        
         dem_info = get_demographic_data(config['datos']['URL_DATOS_DEM'], URL_RESCATES, client)
         
         if 'RUT' in df.columns:
@@ -540,7 +543,7 @@ def get_rescate_data(config):
                 idx_captura = (es_captura_natural | es_captura_manual) & es_anio_actual & (df['CANT_ATENCIONES'] >= 3)
                 df.loc[idx_captura, 'ESTADO_PERCAPITA'] = 'CAPTURA POTENCIAL'
                 
-                df.loc[df['ESTADO_PERCAPITA'].isin(['FUGA RECURRENTE TEMP', 'CAPTURA POTENCIAL TEMP']), 'ESTADO_PERCAPITA'] = 'BAJA NO RECURRENTE'
+                df.loc[df['ESTADO_PERCAPITA'].isin(['FUGA RECURRENTE TEMP', 'CAPTURA POTENCIAL TEMP']), 'ESTADO_PERCAPITA'] = 'PENDIENTE INSCRIPCION'
             else:
                 df.loc[df['ESTADO_PERCAPITA'] == 'FUGA RECURRENTE TEMP', 'ESTADO_PERCAPITA'] = 'FUGA RECURRENTE'
                 df.loc[df['ESTADO_PERCAPITA'] == 'CAPTURA POTENCIAL TEMP', 'ESTADO_PERCAPITA'] = 'CAPTURA POTENCIAL'
@@ -1573,7 +1576,11 @@ else:
             </p>
         </div>""", unsafe_allow_html=True)
     with c2:
-        sector_crit = df_filtered['SECTOR'].mode()[0] if not df_filtered.empty and 'SECTOR' in df_filtered.columns else "N/A"
+        if not df_filtered.empty and 'SECTOR' in df_filtered.columns:
+            mode_vals = df_filtered['SECTOR'].mode()
+            sector_crit = mode_vals.iloc[0] if not mode_vals.empty else "N/A"
+        else:
+            sector_crit = "N/A"
         st.markdown(f"""
         <div class="kpi-metric">
             <div class="kpi-header">
