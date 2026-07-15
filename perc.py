@@ -418,8 +418,8 @@ def load_app_configuration(account_id):
         else:
             config['rol'] = real_role
         
-        # Combine all Plataforma columns so if any contains 'Percapita', we find it
-        plataformas = target_row.get('PLATAFORMA', [])
+        # Solo considera la columna Plataforma_2 para Percapita
+        plataformas = target_row.get('PLATAFORMA_2', [])
         config['plataforma'] = " ".join(str(v).strip() for v in plataformas)
         
         config['debug_keys'] = list(target_row.keys())
