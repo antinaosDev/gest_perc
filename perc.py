@@ -2063,7 +2063,7 @@ else:
                 
                     for col_num, value in enumerate(df_sheet.columns.values):
                         worksheet.write(0, col_num, value, header_format)
-                        col_max_len = df_sheet.iloc[:, col_num].astype(str).str.len().max()
+                        col_max_len = df_sheet.iloc[:, col_num].apply(lambda x: len(str(x))).max() if not df_sheet.empty else 0
                         max_len = max(int(col_max_len) if pd.notna(col_max_len) else 0, len(str(value)))
                         worksheet.set_column(col_num, col_num, min(max_len + 2, 50))
                     
