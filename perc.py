@@ -481,6 +481,9 @@ def get_rescate_data(config):
             registros_recuperados = []
             
             bajas = dem_info.get('bajas_crudas', pd.DataFrame())
+            max_anio = dem_info.get('max_anio_percapita', datetime.now().year)
+            fecha_ficticia = f"17-07-{max_anio} 12:00"
+            
             if not bajas.empty and 'RUT' in bajas.columns:
                 for _, row in bajas.iterrows():
                     rut_clean = normalize_rut(row['RUT'])
@@ -489,7 +492,7 @@ def get_rescate_data(config):
                             'RUT': str(row['RUT']),
                             'RUT_CLEAN': rut_clean,
                             'NOMBRE_PACIENTE': str(row.get('NOMBRE', row.get('NOMBRE_PACIENTE', 'Sin Nombre'))),
-                            'FECHA_AGENDADA': datetime.now().strftime('%d-%m-%Y %H:%M'),
+                            'FECHA_AGENDADA': fecha_ficticia,
                             'ORIGEN_RECUPERADO': 'SI'
                         })
                         ruts_en_agendados.add(rut_clean)
@@ -503,7 +506,7 @@ def get_rescate_data(config):
                             'RUT': str(row['RUT']),
                             'RUT_CLEAN': rut_clean,
                             'NOMBRE_PACIENTE': str(row.get('NOMBRE', row.get('NOMBRE_PACIENTE', 'Sin Nombre'))),
-                            'FECHA_AGENDADA': datetime.now().strftime('%d-%m-%Y %H:%M'),
+                            'FECHA_AGENDADA': fecha_ficticia,
                             'ORIGEN_RECUPERADO': 'SI'
                         })
                         ruts_en_agendados.add(rut_clean)
