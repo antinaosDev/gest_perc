@@ -516,17 +516,9 @@ def get_rescate_data(config):
             df['RUT_CLEAN'] = df['RUT'].apply(normalize_rut)
             
             conteo_atenciones = df.groupby('RUT_CLEAN').size().reset_index(name='CANT_ATENCIONES')
-            # Forzamos CANT_ATENCIONES a 3 para los recuperados para asegurar que pasen filtros estrictos
-            if 'ORIGEN_RECUPERADO' in df.columns:
-                df.loc[df['ORIGEN_RECUPERADO'] == 'SI', 'CANT_ATENCIONES'] = 3
-                
             df = df.merge(conteo_atenciones, on='RUT_CLEAN', how='left')
             
-            # Re-asignar CANT_ATENCIONES a 3 despues del merge por si acaso
             if 'ORIGEN_RECUPERADO' in df.columns:
-                df.loc[df['ORIGEN_RECUPERADO'] == 'SI', 'CANT_ATENCIONES_x'] = 3
-                df.loc[df['ORIGEN_RECUPERADO'] == 'SI', 'CANT_ATENCIONES_y'] = 3
-                df['CANT_ATENCIONES'] = df['CANT_ATENCIONES'].fillna(3)
                 df.loc[df['ORIGEN_RECUPERADO'] == 'SI', 'CANT_ATENCIONES'] = 3
 
 
