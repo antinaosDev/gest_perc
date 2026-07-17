@@ -476,11 +476,59 @@ def get_rescate_data(config):
         
         dem_info = get_demographic_data(config['datos']['URL_DATOS_DEM'], URL_RESCATES, client)
         
+        if dem_info:
+            ruts_en_agendados = set(df['RUT'].astype(str).str.strip().apply(normalize_rut)) if 'RUT' in df.columns else set()
+            registros_recuperados = []
+            
+            bajas = dem_info.get('bajas_crudas', pd.DataFrame())
+            if not bajas.empty and 'RUT' in bajas.columns:
+                for _, row in bajas.iterrows():
+                    rut_clean = normalize_rut(row['RUT'])
+                    if rut_clean not in ruts_en_agendados and rut_clean != 'INVALIDO' and rut_clean != 'S/I':
+                        registros_recuperados.append({
+                            'RUT': str(row['RUT']),
+                            'RUT_CLEAN': rut_clean,
+                            'NOMBRE_PACIENTE': str(row.get('NOMBRE', row.get('NOMBRE_PACIENTE', 'Sin Nombre'))),
+                            'FECHA_AGENDADA': datetime.now().strftime('%d-%m-%Y %H:%M'),
+                            'ORIGEN_RECUPERADO': 'SI'
+                        })
+                        ruts_en_agendados.add(rut_clean)
+            
+            rescates = dem_info.get('rescates_crudos', pd.DataFrame())
+            if not rescates.empty and 'RUT' in rescates.columns:
+                for _, row in rescates.iterrows():
+                    rut_clean = normalize_rut(row['RUT'])
+                    if rut_clean not in ruts_en_agendados and rut_clean != 'INVALIDO' and rut_clean != 'S/I':
+                        registros_recuperados.append({
+                            'RUT': str(row['RUT']),
+                            'RUT_CLEAN': rut_clean,
+                            'NOMBRE_PACIENTE': str(row.get('NOMBRE', row.get('NOMBRE_PACIENTE', 'Sin Nombre'))),
+                            'FECHA_AGENDADA': datetime.now().strftime('%d-%m-%Y %H:%M'),
+                            'ORIGEN_RECUPERADO': 'SI'
+                        })
+                        ruts_en_agendados.add(rut_clean)
+                        
+            if registros_recuperados:
+                df_rec = pd.DataFrame(registros_recuperados)
+                df = pd.concat([df, df_rec], ignore_index=True)
+
         if 'RUT' in df.columns:
             df['RUT_CLEAN'] = df['RUT'].apply(normalize_rut)
             
             conteo_atenciones = df.groupby('RUT_CLEAN').size().reset_index(name='CANT_ATENCIONES')
+            # Forzamos CANT_ATENCIONES a 3 para los recuperados para asegurar que pasen filtros estrictos
+            if 'ORIGEN_RECUPERADO' in df.columns:
+                df.loc[df['ORIGEN_RECUPERADO'] == 'SI', 'CANT_ATENCIONES'] = 3
+                
             df = df.merge(conteo_atenciones, on='RUT_CLEAN', how='left')
+            
+            # Re-asignar CANT_ATENCIONES a 3 despues del merge por si acaso
+            if 'ORIGEN_RECUPERADO' in df.columns:
+                df.loc[df['ORIGEN_RECUPERADO'] == 'SI', 'CANT_ATENCIONES_x'] = 3
+                df.loc[df['ORIGEN_RECUPERADO'] == 'SI', 'CANT_ATENCIONES_y'] = 3
+                df['CANT_ATENCIONES'] = df['CANT_ATENCIONES'].fillna(3)
+                df.loc[df['ORIGEN_RECUPERADO'] == 'SI', 'CANT_ATENCIONES'] = 3
+
 
         if dem_info:
             # Cruce Sector
