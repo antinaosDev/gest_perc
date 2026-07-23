@@ -2653,13 +2653,14 @@ else:
                         df_exitosos_global = df_rescates_global.copy()
                         
                     if not df_exitosos_global['FECHA_RESCATE_DT'].isna().all():
-                        df_exitosos_global['FECHA_MES'] = df_exitosos_global['FECHA_RESCATE_DT'].dt.to_period('M').astype(str)
-                        df_tiempo_g = df_exitosos_global.groupby('FECHA_MES').size().reset_index(name='CANTIDAD')
-                        df_tiempo_g = df_tiempo_g.sort_values('FECHA_MES')
+                        df_exitosos_global['FECHA_DIA'] = df_exitosos_global['FECHA_RESCATE_DT'].dt.strftime('%d-%m-%Y')
+                        df_tiempo_g = df_exitosos_global.groupby('FECHA_DIA').size().reset_index(name='CANTIDAD')
+                        df_tiempo_g['FECHA_SORT'] = pd.to_datetime(df_tiempo_g['FECHA_DIA'], format='%d-%m-%Y')
+                        df_tiempo_g = df_tiempo_g.sort_values('FECHA_SORT')
                         
-                        fig_tiempo_g = px.bar(df_tiempo_g, x='FECHA_MES', y='CANTIDAD', text='CANTIDAD')
-                        fig_tiempo_g.update_traces(textposition="outside", marker_color='#10b981', marker_line_color='rgb(8,48,107)', marker_line_width=1.5, opacity=0.8)
-                        fig_tiempo_g.update_layout(xaxis_type='category', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', xaxis_title="Mes", yaxis_title="Rescates Históricos", margin=dict(l=0, r=0, t=30, b=0))
+                        fig_tiempo_g = px.area(df_tiempo_g, x='FECHA_DIA', y='CANTIDAD', markers=True, text='CANTIDAD')
+                        fig_tiempo_g.update_traces(textposition="top center", line_color='#10b981', fillcolor='rgba(16, 185, 129, 0.2)', marker=dict(size=8, color="#059669", line=dict(width=1.5, color='white')))
+                        fig_tiempo_g.update_layout(xaxis_type='category', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', xaxis_title="Fecha", yaxis_title="Rescates Históricos", margin=dict(l=0, r=0, t=30, b=0))
                         st.plotly_chart(fig_tiempo_g, width="stretch")
                 
                 with st.expander("📄 Ver Datos de Rescates Exitosos (Crudos)"):
