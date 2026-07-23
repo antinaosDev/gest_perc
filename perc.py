@@ -2690,9 +2690,9 @@ else:
                     df_tiempo['FECHA_SORT'] = pd.to_datetime(df_tiempo['FECHA_DIA'], format='%d-%m-%Y')
                     df_tiempo = df_tiempo.sort_values('FECHA_SORT')
                 
-                    fig_tiempo = px.area(df_tiempo, x='FECHA_DIA', y='CANTIDAD', markers=True)
-                    fig_tiempo.update_traces(line_color='#00A8E8', fillcolor='rgba(0, 168, 232, 0.2)', marker=dict(size=10, color="#FFB703", line=dict(width=2, color='white')))
-                    max_y1 = max(60, df_tiempo['CANTIDAD'].max() * 1.1) if not df_tiempo.empty else 60
+                    fig_tiempo = px.area(df_tiempo, x='FECHA_DIA', y='CANTIDAD', markers=True, text='CANTIDAD')
+                    fig_tiempo.update_traces(textposition="top center", line_color='#00A8E8', fillcolor='rgba(0, 168, 232, 0.2)', marker=dict(size=10, color="#FFB703", line=dict(width=2, color='white')))
+                    max_y1 = max(40, df_tiempo['CANTIDAD'].max() * 1.1) if not df_tiempo.empty else 40
                     fig_tiempo.update_layout(xaxis_type='category', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', xaxis_title="Fecha", yaxis_title="Rescates", margin=dict(l=0, r=0, t=30, b=0), yaxis=dict(range=[0, max_y1]))
                     st.plotly_chart(fig_tiempo, width="stretch")
                     
@@ -2737,9 +2737,9 @@ else:
                             df_tiempo_g['FECHA_SORT'] = pd.to_datetime(df_tiempo_g['FECHA_DIA'], format='%d-%m-%Y')
                             df_tiempo_g = df_tiempo_g.sort_values('FECHA_SORT')
                             
-                            fig_tiempo_g = px.area(df_tiempo_g, x='FECHA_DIA', y='CANTIDAD', color='TIPO_INSCRIPCION', markers=True)
-                            fig_tiempo_g.update_traces(marker=dict(size=8, line=dict(width=1.5, color='white')))
-                            max_y2 = max(60, df_tiempo_g['CANTIDAD'].max() * 1.1) if not df_tiempo_g.empty else 60
+                            fig_tiempo_g = px.area(df_tiempo_g, x='FECHA_DIA', y='CANTIDAD', color='TIPO_INSCRIPCION', markers=True, text='CANTIDAD')
+                            fig_tiempo_g.update_traces(textposition="top center", marker=dict(size=8, line=dict(width=1.5, color='white')))
+                            max_y2 = max(40, df_tiempo_g['CANTIDAD'].max() * 1.1) if not df_tiempo_g.empty else 40
                             fig_tiempo_g.update_layout(xaxis_type='category', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', xaxis_title="Fecha", yaxis_title="Rescates Históricos Únicos", margin=dict(l=0, r=0, t=30, b=0), legend_title_text='', yaxis=dict(range=[0, max_y2]))
                             st.plotly_chart(fig_tiempo_g, width="stretch")
                 
