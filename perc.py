@@ -2715,13 +2715,24 @@ else:
                     exitosos_global = len(df_exitosos_global)
                     gestores_global = df_exitosos_global['USUARIO_GESTOR'].nunique() if 'USUARIO_GESTOR' in df_exitosos_global.columns else 0
                     
-                    cg1, cg2, cg3 = st.columns(3)
+                    if 'CATEGORIA' in df_rescates_global.columns:
+                        nuevos_global = len(df_rescates_global[df_rescates_global['CATEGORIA'].str.contains("Nuevo", na=False, case=False)])
+                        ya_insc_global = len(df_rescates_global[df_rescates_global['CATEGORIA'].str.contains("Re-inscrip|Presenta", na=False, case=False)])
+                    else:
+                        nuevos_global = 0
+                        ya_insc_global = 0
+                    
+                    cg1, cg2, cg3, cg4, cg5 = st.columns(5)
                     with cg1:
-                        st.metric(label="Total Registros Únicos (Histórico)", value=total_global)
+                        st.metric(label="Total Registros Únicos", value=total_global)
                     with cg2:
-                        st.metric(label="Inscripciones Únicas Exitosas", value=exitosos_global)
+                        st.metric(label="Total Exitosos", value=exitosos_global)
                     with cg3:
-                        st.metric(label="Gestores Activos (Histórico)", value=gestores_global)
+                        st.metric(label="Nuevos Inscritos", value=nuevos_global)
+                    with cg4:
+                        st.metric(label="Ya Inscritos", value=ya_insc_global)
+                    with cg5:
+                        st.metric(label="Gestores Activos", value=gestores_global)
                     
                     if not df_grafico_global.empty and 'FECHA_RESCATE' in df_grafico_global.columns:
                         df_grafico_global['FECHA_RESCATE_DT'] = pd.to_datetime(df_grafico_global['FECHA_RESCATE'], errors='coerce')
