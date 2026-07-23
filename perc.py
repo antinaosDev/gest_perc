@@ -2646,13 +2646,26 @@ else:
                 st.markdown("#### 🌎 Evolución Histórica Global de Rescates")
                 df_rescates_global = APP_CONFIG['datos'].get('rescates_crudos', pd.DataFrame()).copy()
                 if not df_rescates_global.empty and 'FECHA_RESCATE' in df_rescates_global.columns:
-                    df_rescates_global['FECHA_RESCATE_DT'] = pd.to_datetime(df_rescates_global['FECHA_RESCATE'], errors='coerce')
+                    total_global = len(df_rescates_global)
                     if 'CATEGORIA' in df_rescates_global.columns:
                         df_exitosos_global = df_rescates_global[df_rescates_global['CATEGORIA'].str.contains("Inscrito Exitosamente", na=False, case=False)].copy()
                     else:
                         df_exitosos_global = df_rescates_global.copy()
                         
-                    if not df_exitosos_global['FECHA_RESCATE_DT'].isna().all():
+                    exitosos_global = len(df_exitosos_global)
+                    gestores_global = df_exitosos_global['USUARIO_GESTOR'].nunique() if 'USUARIO_GESTOR' in df_exitosos_global.columns else 0
+                    
+                    cg1, cg2, cg3 = st.columns(3)
+                    with cg1:
+                        st.metric(label="Total Registros (Histórico)", value=total_global)
+                    with cg2:
+                        st.metric(label="Inscripciones Exitosas (Histórico)", value=exitosos_global)
+                    with cg3:
+                        st.metric(label="Gestores Activos (Histórico)", value=gestores_global)
+                    
+                    df_rescates_global['FECHA_RESCATE_DT'] = pd.to_datetime(df_rescates_global['FECHA_RESCATE'], errors='coerce')
+                    if not df_exitosos_global['FECHA_RESCATE_DT'].isna().all() if 'FECHA_RESCATE_DT' in df_exitosos_global.columns else (not df_rescates_global['FECHA_RESCATE_DT'].isna().all()):
+                        df_exitosos_global['FECHA_RESCATE_DT'] = pd.to_datetime(df_exitosos_global['FECHA_RESCATE'], errors='coerce')
                         df_exitosos_global['FECHA_DIA'] = df_exitosos_global['FECHA_RESCATE_DT'].dt.strftime('%d-%m-%Y')
                         df_tiempo_g = df_exitosos_global.groupby('FECHA_DIA').size().reset_index(name='CANTIDAD')
                         df_tiempo_g['FECHA_SORT'] = pd.to_datetime(df_tiempo_g['FECHA_DIA'], format='%d-%m-%Y')
