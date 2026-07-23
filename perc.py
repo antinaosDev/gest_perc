@@ -2723,7 +2723,7 @@ else:
                     total_global = len(df_rescates_global)
                     if 'CATEGORIA' in df_rescates_global.columns:
                         df_exitosos_global = df_rescates_global[df_rescates_global['CATEGORIA'].str.contains("Inscrito Exitosamente", na=False, case=False)].copy()
-                        df_grafico_global = df_exitosos_global.copy()
+                        df_grafico_global = df_rescates_global[df_rescates_global['CATEGORIA'].str.contains("Inscrito Exitosamente|Presenta registro", na=False, case=False)].copy()
                     else:
                         df_exitosos_global = df_rescates_global.copy()
                         df_grafico_global = df_rescates_global.copy()
@@ -2763,6 +2763,8 @@ else:
                             if 'CATEGORIA' in df_grafico_global.columns:
                                 idx_ya = df_grafico_global['CATEGORIA'].str.contains('Re-inscrip', case=False, na=False)
                                 df_grafico_global.loc[idx_ya, 'TIPO_INSCRIPCION'] = 'Re-inscritos'
+                                idx_pre = df_grafico_global['CATEGORIA'].str.contains('Presenta registro', case=False, na=False)
+                                df_grafico_global.loc[idx_pre, 'TIPO_INSCRIPCION'] = 'Ya en Plataforma'
                                 
                             df_tiempo_g = df_grafico_global.groupby(['FECHA_DIA', 'TIPO_INSCRIPCION']).size().reset_index(name='CANTIDAD')
                             df_tiempo_g['FECHA_SORT'] = pd.to_datetime(df_tiempo_g['FECHA_DIA'], format='%d-%m-%Y')
