@@ -2691,8 +2691,8 @@ else:
                             df_tiempo_g['FECHA_SORT'] = pd.to_datetime(df_tiempo_g['FECHA_DIA'], format='%d-%m-%Y')
                             df_tiempo_g = df_tiempo_g.sort_values('FECHA_SORT')
                             
-                            fig_tiempo_g = px.area(df_tiempo_g, x='FECHA_DIA', y='CANTIDAD', color='TIPO_INSCRIPCION', markers=True, text='CANTIDAD')
-                            fig_tiempo_g.update_traces(textposition="top center", marker=dict(size=8, line=dict(width=1.5, color='white')))
+                            fig_tiempo_g = px.area(df_tiempo_g, x='FECHA_DIA', y='CANTIDAD', color='TIPO_INSCRIPCION', markers=True)
+                            fig_tiempo_g.update_traces(marker=dict(size=8, line=dict(width=1.5, color='white')))
                             fig_tiempo_g.update_layout(xaxis_type='category', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', xaxis_title="Fecha", yaxis_title="Rescates Históricos Únicos", margin=dict(l=0, r=0, t=30, b=0), legend_title_text='')
                             st.plotly_chart(fig_tiempo_g, width="stretch")
                 
