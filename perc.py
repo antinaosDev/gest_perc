@@ -2707,7 +2707,7 @@ else:
                     total_global = len(df_rescates_global)
                     if 'CATEGORIA' in df_rescates_global.columns:
                         df_exitosos_global = df_rescates_global[df_rescates_global['CATEGORIA'].str.contains("Inscrito Exitosamente", na=False, case=False)].copy()
-                        df_grafico_global = df_rescates_global[df_rescates_global['CATEGORIA'].str.contains("Inscrito Exitosamente|Presenta registro", na=False, case=False)].copy()
+                        df_grafico_global = df_exitosos_global.copy()
                     else:
                         df_exitosos_global = df_rescates_global.copy()
                         df_grafico_global = df_rescates_global.copy()
@@ -2717,10 +2717,10 @@ else:
                     
                     if 'CATEGORIA' in df_rescates_global.columns:
                         nuevos_global = len(df_rescates_global[df_rescates_global['CATEGORIA'].str.contains("Nuevo", na=False, case=False)])
-                        ya_insc_global = len(df_rescates_global[df_rescates_global['CATEGORIA'].str.contains("Re-inscrip|Presenta", na=False, case=False)])
+                        re_insc_global = len(df_rescates_global[df_rescates_global['CATEGORIA'].str.contains("Re-inscrip", na=False, case=False)])
                     else:
                         nuevos_global = 0
-                        ya_insc_global = 0
+                        re_insc_global = 0
                     
                     valor_percapita = 16872
                     valor_nuevos = f"${nuevos_global * valor_percapita:,.0f}".replace(",", ".")
@@ -2729,11 +2729,11 @@ else:
                     with cg1:
                         st.metric(label="Total Registros Únicos", value=total_global)
                     with cg2:
-                        st.metric(label="Total Exitosos (Nuevos + Ya Inscritos)", value=exitosos_global)
+                        st.metric(label="Total Exitosos (Nuevos + Re-inscritos)", value=exitosos_global)
                     with cg3:
                         st.metric(label="Nuevos Inscritos", value=nuevos_global, delta=f"{valor_nuevos} CLP")
                     with cg4:
-                        st.metric(label="Ya Inscritos", value=ya_insc_global)
+                        st.metric(label="Re-inscritos", value=re_insc_global)
                     with cg5:
                         st.metric(label="Gestores Activos", value=gestores_global)
                     
@@ -2745,8 +2745,8 @@ else:
                             
                             df_grafico_global['TIPO_INSCRIPCION'] = 'Nuevos Inscritos'
                             if 'CATEGORIA' in df_grafico_global.columns:
-                                idx_ya = df_grafico_global['CATEGORIA'].str.contains('Re-inscrip|Presenta', case=False, na=False)
-                                df_grafico_global.loc[idx_ya, 'TIPO_INSCRIPCION'] = 'Ya Inscritos / Re-inscritos'
+                                idx_ya = df_grafico_global['CATEGORIA'].str.contains('Re-inscrip', case=False, na=False)
+                                df_grafico_global.loc[idx_ya, 'TIPO_INSCRIPCION'] = 'Re-inscritos'
                                 
                             df_tiempo_g = df_grafico_global.groupby(['FECHA_DIA', 'TIPO_INSCRIPCION']).size().reset_index(name='CANTIDAD')
                             df_tiempo_g['FECHA_SORT'] = pd.to_datetime(df_tiempo_g['FECHA_DIA'], format='%d-%m-%Y')
