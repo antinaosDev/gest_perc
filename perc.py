@@ -2207,12 +2207,23 @@ else:
                     else:
                         try:
                             rut_clean_temp = normalize_rut(rut_esp)
-                            df_check = APP_CONFIG['datos'].get('rescates_crudos', pd.DataFrame())
+                            df_resc = APP_CONFIG['datos'].get('rescates_crudos', pd.DataFrame())
+                            df_bajas = APP_CONFIG['datos'].get('bajas_crudas', pd.DataFrame())
+                            df_check = pd.concat([df_resc, df_bajas], ignore_index=True) if not df_resc.empty or not df_bajas.empty else pd.DataFrame()
+                            
                             if not df_check.empty and 'RUT' in df_check.columns and 'CATEGORIA' in df_check.columns:
                                 df_check['RUT_CLN'] = df_check['RUT'].apply(normalize_rut)
-                                prev = df_check[df_check['RUT_CLN'] == rut_clean_temp]
+                                prev = df_check[df_check['RUT_CLN'] == rut_clean_temp].copy()
                                 if not prev.empty:
+                                    if 'FECHA_RESCATE' in prev.columns:
+                                        prev['FECHA_RESCATE_DT'] = pd.to_datetime(prev['FECHA_RESCATE'], errors='coerce')
+                                        prev = prev.sort_values(by='FECHA_RESCATE_DT')
                                     last_c = str(prev.iloc[-1]['CATEGORIA'])
+                                    
+                                    if last_c.lower().strip() == cat_esp.lower().strip():
+                                        st.error(f"❌ El paciente ya está registrado actualmente como '{last_c}'. No puedes duplicar este registro.")
+                                        st.stop()
+                                        
                                     if ("Inscrito Exitosamente" in last_c or "Presenta registro" in last_c) and cat_esp in ["Inscrito Exitosamente (Nuevo Inscrito)", "Inscrito Exitosamente (Re-inscripción)", "Presenta registro en plataforma Fonasa"]:
                                         st.error(f"❌ El paciente ya está registrado exitosamente como '{last_c}'. No puedes volver a inscribirlo.")
                                         st.stop()
@@ -2431,12 +2442,23 @@ else:
                         if st.button("Confirmar Rescate/Gestión", type="primary", use_container_width=True):
                             # PREVENCION DE DUPLICADOS EN MEMORIA (EVITA LLAMADAS API INNECESARIAS)
                             rut_clean_temp = normalize_rut(rut_val)
-                            df_check = APP_CONFIG['datos'].get('rescates_crudos', pd.DataFrame())
+                            df_resc = APP_CONFIG['datos'].get('rescates_crudos', pd.DataFrame())
+                            df_bajas = APP_CONFIG['datos'].get('bajas_crudas', pd.DataFrame())
+                            df_check = pd.concat([df_resc, df_bajas], ignore_index=True) if not df_resc.empty or not df_bajas.empty else pd.DataFrame()
+                            
                             if not df_check.empty and 'RUT' in df_check.columns and 'CATEGORIA' in df_check.columns:
                                 df_check['RUT_CLN'] = df_check['RUT'].apply(normalize_rut)
-                                prev = df_check[df_check['RUT_CLN'] == rut_clean_temp]
+                                prev = df_check[df_check['RUT_CLN'] == rut_clean_temp].copy()
                                 if not prev.empty:
+                                    if 'FECHA_RESCATE' in prev.columns:
+                                        prev['FECHA_RESCATE_DT'] = pd.to_datetime(prev['FECHA_RESCATE'], errors='coerce')
+                                        prev = prev.sort_values(by='FECHA_RESCATE_DT')
                                     last_c = str(prev.iloc[-1]['CATEGORIA'])
+                                    
+                                    if last_c.lower().strip() == categoria.lower().strip():
+                                        st.error(f"❌ El paciente ya está registrado actualmente como '{last_c}'. No puedes duplicar este registro.")
+                                        st.stop()
+                                        
                                     if ("Inscrito Exitosamente" in last_c or "Presenta registro" in last_c) and categoria in ["Inscrito Exitosamente (Nuevo Inscrito)", "Inscrito Exitosamente (Re-inscripción)", "Presenta registro en plataforma Fonasa"]:
                                         st.error(f"❌ El paciente ya está registrado exitosamente como '{last_c}'. No puedes volver a inscribirlo.")
                                         st.stop()
