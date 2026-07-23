@@ -2508,7 +2508,14 @@ else:
             st.info("Indicadores de gestión y rendimiento del equipo de rescate por periodo de evaluación.")
         
             df_rescates_raw = APP_CONFIG['datos'].get('rescates_crudos', pd.DataFrame()).copy()
+            if not df_rescates_raw.empty and 'RUT' in df_rescates_raw.columns:
+                df_rescates_raw['RUT_CLEAN'] = df_rescates_raw['RUT'].apply(normalize_rut)
+                df_rescates_raw = df_rescates_raw.drop_duplicates(subset=['RUT_CLEAN'], keep='last')
+                
             df_bajas_raw = APP_CONFIG['datos'].get('bajas_crudas', pd.DataFrame()).copy()
+            if not df_bajas_raw.empty and 'RUT' in df_bajas_raw.columns:
+                df_bajas_raw['RUT_CLEAN'] = df_bajas_raw['RUT'].apply(normalize_rut)
+                df_bajas_raw = df_bajas_raw.drop_duplicates(subset=['RUT_CLEAN'], keep='last')
         
             # Filtros por defecto desde la última base percapita
             def_anio = int(dem_info.get('max_anio_percapita', datetime.now().year))
@@ -2645,36 +2652,49 @@ else:
                     
                 st.markdown("#### 🌎 Evolución Histórica Global de Rescates")
                 df_rescates_global = APP_CONFIG['datos'].get('rescates_crudos', pd.DataFrame()).copy()
+                if not df_rescates_global.empty and 'RUT' in df_rescates_global.columns:
+                    df_rescates_global['RUT_CLEAN'] = df_rescates_global['RUT'].apply(normalize_rut)
+                    df_rescates_global = df_rescates_global.drop_duplicates(subset=['RUT_CLEAN'], keep='last')
+
                 if not df_rescates_global.empty and 'FECHA_RESCATE' in df_rescates_global.columns:
                     total_global = len(df_rescates_global)
                     if 'CATEGORIA' in df_rescates_global.columns:
                         df_exitosos_global = df_rescates_global[df_rescates_global['CATEGORIA'].str.contains("Inscrito Exitosamente", na=False, case=False)].copy()
+                        df_grafico_global = df_rescates_global[df_rescates_global['CATEGORIA'].str.contains("Inscrito Exitosamente|Presenta registro", na=False, case=False)].copy()
                     else:
                         df_exitosos_global = df_rescates_global.copy()
+                        df_grafico_global = df_rescates_global.copy()
                         
                     exitosos_global = len(df_exitosos_global)
                     gestores_global = df_exitosos_global['USUARIO_GESTOR'].nunique() if 'USUARIO_GESTOR' in df_exitosos_global.columns else 0
                     
                     cg1, cg2, cg3 = st.columns(3)
                     with cg1:
-                        st.metric(label="Total Registros (Histórico)", value=total_global)
+                        st.metric(label="Total Registros Únicos (Histórico)", value=total_global)
                     with cg2:
-                        st.metric(label="Inscripciones Exitosas (Histórico)", value=exitosos_global)
+                        st.metric(label="Inscripciones Únicas Exitosas", value=exitosos_global)
                     with cg3:
                         st.metric(label="Gestores Activos (Histórico)", value=gestores_global)
                     
-                    df_rescates_global['FECHA_RESCATE_DT'] = pd.to_datetime(df_rescates_global['FECHA_RESCATE'], errors='coerce')
-                    if not df_exitosos_global['FECHA_RESCATE_DT'].isna().all() if 'FECHA_RESCATE_DT' in df_exitosos_global.columns else (not df_rescates_global['FECHA_RESCATE_DT'].isna().all()):
-                        df_exitosos_global['FECHA_RESCATE_DT'] = pd.to_datetime(df_exitosos_global['FECHA_RESCATE'], errors='coerce')
-                        df_exitosos_global['FECHA_DIA'] = df_exitosos_global['FECHA_RESCATE_DT'].dt.strftime('%d-%m-%Y')
-                        df_tiempo_g = df_exitosos_global.groupby('FECHA_DIA').size().reset_index(name='CANTIDAD')
-                        df_tiempo_g['FECHA_SORT'] = pd.to_datetime(df_tiempo_g['FECHA_DIA'], format='%d-%m-%Y')
-                        df_tiempo_g = df_tiempo_g.sort_values('FECHA_SORT')
+                    if not df_grafico_global.empty and 'FECHA_RESCATE' in df_grafico_global.columns:
+                        df_grafico_global['FECHA_RESCATE_DT'] = pd.to_datetime(df_grafico_global['FECHA_RESCATE'], errors='coerce')
                         
-                        fig_tiempo_g = px.area(df_tiempo_g, x='FECHA_DIA', y='CANTIDAD', markers=True, text='CANTIDAD')
-                        fig_tiempo_g.update_traces(textposition="top center", line_color='#10b981', fillcolor='rgba(16, 185, 129, 0.2)', marker=dict(size=8, color="#059669", line=dict(width=1.5, color='white')))
-                        fig_tiempo_g.update_layout(xaxis_type='category', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', xaxis_title="Fecha", yaxis_title="Rescates Históricos", margin=dict(l=0, r=0, t=30, b=0))
-                        st.plotly_chart(fig_tiempo_g, width="stretch")
+                        if not df_grafico_global['FECHA_RESCATE_DT'].isna().all():
+                            df_grafico_global['FECHA_DIA'] = df_grafico_global['FECHA_RESCATE_DT'].dt.strftime('%d-%m-%Y')
+                            
+                            df_grafico_global['TIPO_INSCRIPCION'] = 'Nuevos Inscritos'
+                            if 'CATEGORIA' in df_grafico_global.columns:
+                                idx_ya = df_grafico_global['CATEGORIA'].str.contains('Re-inscrip|Presenta', case=False, na=False)
+                                df_grafico_global.loc[idx_ya, 'TIPO_INSCRIPCION'] = 'Ya Inscritos / Re-inscritos'
+                                
+                            df_tiempo_g = df_grafico_global.groupby(['FECHA_DIA', 'TIPO_INSCRIPCION']).size().reset_index(name='CANTIDAD')
+                            df_tiempo_g['FECHA_SORT'] = pd.to_datetime(df_tiempo_g['FECHA_DIA'], format='%d-%m-%Y')
+                            df_tiempo_g = df_tiempo_g.sort_values('FECHA_SORT')
+                            
+                            fig_tiempo_g = px.area(df_tiempo_g, x='FECHA_DIA', y='CANTIDAD', color='TIPO_INSCRIPCION', markers=True, text='CANTIDAD')
+                            fig_tiempo_g.update_traces(textposition="top center", marker=dict(size=8, line=dict(width=1.5, color='white')))
+                            fig_tiempo_g.update_layout(xaxis_type='category', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', xaxis_title="Fecha", yaxis_title="Rescates Históricos Únicos", margin=dict(l=0, r=0, t=30, b=0), legend_title_text='')
+                            st.plotly_chart(fig_tiempo_g, width="stretch")
                 
                 with st.expander("📄 Ver Datos de Rescates Exitosos (Crudos)"):
                     st.dataframe(df_rescates_raw, width='stretch')
