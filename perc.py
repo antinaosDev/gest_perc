@@ -2722,15 +2722,20 @@ else:
                         nuevos_global = 0
                         ya_insc_global = 0
                     
+                    valor_percapita = 16872
+                    valor_nuevos = f"${nuevos_global * valor_percapita:,.0f}".replace(",", ".")
+                    valor_re = f"${ya_insc_global * valor_percapita:,.0f}".replace(",", ".")
+                    valor_total = f"${exitosos_global * valor_percapita:,.0f}".replace(",", ".")
+                    
                     cg1, cg2, cg3, cg4, cg5 = st.columns(5)
                     with cg1:
                         st.metric(label="Total Registros Únicos", value=total_global)
                     with cg2:
-                        st.metric(label="Total Exitosos", value=exitosos_global)
+                        st.metric(label="Total Exitosos", value=exitosos_global, delta=f"{valor_total} CLP")
                     with cg3:
-                        st.metric(label="Nuevos Inscritos", value=nuevos_global)
+                        st.metric(label="Nuevos Inscritos", value=nuevos_global, delta=f"{valor_nuevos} CLP")
                     with cg4:
-                        st.metric(label="Ya Inscritos", value=ya_insc_global)
+                        st.metric(label="Ya Inscritos", value=ya_insc_global, delta=f"{valor_re} CLP")
                     with cg5:
                         st.metric(label="Gestores Activos", value=gestores_global)
                     
