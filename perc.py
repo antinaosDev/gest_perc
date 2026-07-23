@@ -2206,6 +2206,17 @@ else:
                         st.error("Debe ingresar el nombre del paciente.")
                     else:
                         try:
+                            rut_clean_temp = normalize_rut(rut_esp)
+                            df_check = APP_CONFIG['datos'].get('rescates_crudos', pd.DataFrame())
+                            if not df_check.empty and 'RUT' in df_check.columns and 'CATEGORIA' in df_check.columns:
+                                df_check['RUT_CLN'] = df_check['RUT'].apply(normalize_rut)
+                                prev = df_check[df_check['RUT_CLN'] == rut_clean_temp]
+                                if not prev.empty:
+                                    last_c = str(prev.iloc[-1]['CATEGORIA'])
+                                    if ("Inscrito Exitosamente" in last_c or "Presenta registro" in last_c) and cat_esp in ["Inscrito Exitosamente (Nuevo Inscrito)", "Inscrito Exitosamente (Re-inscripción)", "Presenta registro en plataforma Fonasa"]:
+                                        st.error(f"❌ El paciente ya está registrado exitosamente como '{last_c}'. No puedes volver a inscribirlo.")
+                                        st.stop()
+                                        
                             import pytz
                             from datetime import datetime
                             stgo_tz = pytz.timezone('America/Santiago')
@@ -2418,6 +2429,18 @@ else:
                         obs = st.text_area("Detalles Adicionales (Opcional)")
                     
                         if st.button("Confirmar Rescate/Gestión", type="primary", use_container_width=True):
+                            # PREVENCION DE DUPLICADOS EN MEMORIA (EVITA LLAMADAS API INNECESARIAS)
+                            rut_clean_temp = normalize_rut(rut_val)
+                            df_check = APP_CONFIG['datos'].get('rescates_crudos', pd.DataFrame())
+                            if not df_check.empty and 'RUT' in df_check.columns and 'CATEGORIA' in df_check.columns:
+                                df_check['RUT_CLN'] = df_check['RUT'].apply(normalize_rut)
+                                prev = df_check[df_check['RUT_CLN'] == rut_clean_temp]
+                                if not prev.empty:
+                                    last_c = str(prev.iloc[-1]['CATEGORIA'])
+                                    if ("Inscrito Exitosamente" in last_c or "Presenta registro" in last_c) and categoria in ["Inscrito Exitosamente (Nuevo Inscrito)", "Inscrito Exitosamente (Re-inscripción)", "Presenta registro en plataforma Fonasa"]:
+                                        st.error(f"❌ El paciente ya está registrado exitosamente como '{last_c}'. No puedes volver a inscribirlo.")
+                                        st.stop()
+                            
                             # ===== GUARDAR EN GOOGLE SHEETS ======
                             try:
                                 url_rescates = st.secrets["URL_RESCATES"]
@@ -2645,9 +2668,10 @@ else:
                     df_tiempo['FECHA_SORT'] = pd.to_datetime(df_tiempo['FECHA_DIA'], format='%d-%m-%Y')
                     df_tiempo = df_tiempo.sort_values('FECHA_SORT')
                 
-                    fig_tiempo = px.area(df_tiempo, x='FECHA_DIA', y='CANTIDAD', markers=True, text='CANTIDAD')
-                    fig_tiempo.update_traces(textposition="top center", line_color='#00A8E8', fillcolor='rgba(0, 168, 232, 0.2)', marker=dict(size=10, color="#FFB703", line=dict(width=2, color='white')))
-                    fig_tiempo.update_layout(xaxis_type='category', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', xaxis_title="Fecha", yaxis_title="Rescates", margin=dict(l=0, r=0, t=30, b=0))
+                    fig_tiempo = px.area(df_tiempo, x='FECHA_DIA', y='CANTIDAD', markers=True)
+                    fig_tiempo.update_traces(line_color='#00A8E8', fillcolor='rgba(0, 168, 232, 0.2)', marker=dict(size=10, color="#FFB703", line=dict(width=2, color='white')))
+                    max_y1 = max(60, df_tiempo['CANTIDAD'].max() * 1.1) if not df_tiempo.empty else 60
+                    fig_tiempo.update_layout(xaxis_type='category', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', xaxis_title="Fecha", yaxis_title="Rescates", margin=dict(l=0, r=0, t=30, b=0), yaxis=dict(range=[0, max_y1]))
                     st.plotly_chart(fig_tiempo, width="stretch")
                     
                 st.markdown("#### 🌎 Evolución Histórica Global de Rescates")
@@ -2693,7 +2717,8 @@ else:
                             
                             fig_tiempo_g = px.area(df_tiempo_g, x='FECHA_DIA', y='CANTIDAD', color='TIPO_INSCRIPCION', markers=True)
                             fig_tiempo_g.update_traces(marker=dict(size=8, line=dict(width=1.5, color='white')))
-                            fig_tiempo_g.update_layout(xaxis_type='category', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', xaxis_title="Fecha", yaxis_title="Rescates Históricos Únicos", margin=dict(l=0, r=0, t=30, b=0), legend_title_text='')
+                            max_y2 = max(60, df_tiempo_g['CANTIDAD'].max() * 1.1) if not df_tiempo_g.empty else 60
+                            fig_tiempo_g.update_layout(xaxis_type='category', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#2C3E50', xaxis_title="Fecha", yaxis_title="Rescates Históricos Únicos", margin=dict(l=0, r=0, t=30, b=0), legend_title_text='', yaxis=dict(range=[0, max_y2]))
                             st.plotly_chart(fig_tiempo_g, width="stretch")
                 
                 with st.expander("📄 Ver Datos de Rescates Exitosos (Crudos)"):
