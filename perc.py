@@ -2552,15 +2552,31 @@ else:
             st.markdown("### 🏆 Métricas y Rendimiento de Rescates")
             st.info("Indicadores de gestión y rendimiento del equipo de rescate por periodo de evaluación.")
         
-            df_rescates_raw = APP_CONFIG['datos'].get('rescates_crudos', pd.DataFrame()).copy()
-            if not df_rescates_raw.empty and 'RUT' in df_rescates_raw.columns:
-                df_rescates_raw['RUT_CLEAN'] = df_rescates_raw['RUT'].apply(normalize_rut)
-                df_rescates_raw = df_rescates_raw.drop_duplicates(subset=['RUT_CLEAN'], keep='last')
+            df_resc_temp = APP_CONFIG['datos'].get('rescates_crudos', pd.DataFrame()).copy()
+            df_baj_temp = APP_CONFIG['datos'].get('bajas_crudas', pd.DataFrame()).copy()
+            
+            if not df_resc_temp.empty:
+                df_resc_temp['TIPO_TABLA'] = 'rescate'
+            if not df_baj_temp.empty:
+                df_baj_temp['TIPO_TABLA'] = 'baja'
                 
-            df_bajas_raw = APP_CONFIG['datos'].get('bajas_crudas', pd.DataFrame()).copy()
-            if not df_bajas_raw.empty and 'RUT' in df_bajas_raw.columns:
-                df_bajas_raw['RUT_CLEAN'] = df_bajas_raw['RUT'].apply(normalize_rut)
-                df_bajas_raw = df_bajas_raw.drop_duplicates(subset=['RUT_CLEAN'], keep='last')
+            df_all = pd.concat([df_resc_temp, df_baj_temp], ignore_index=True)
+            
+            if not df_all.empty and 'RUT' in df_all.columns:
+                df_all['RUT_CLEAN'] = df_all['RUT'].apply(normalize_rut)
+                if 'FECHA_RESCATE' in df_all.columns:
+                    df_all['FECHA_RESCATE_DT_TMP'] = pd.to_datetime(df_all['FECHA_RESCATE'], errors='coerce')
+                    df_all = df_all.sort_values('FECHA_RESCATE_DT_TMP')
+                df_all = df_all.drop_duplicates(subset=['RUT_CLEAN'], keep='last')
+                
+                df_rescates_raw = df_all[df_all['TIPO_TABLA'] == 'rescate'].copy()
+                df_bajas_raw = df_all[df_all['TIPO_TABLA'] == 'baja'].copy()
+                
+                df_rescates_raw = df_rescates_raw.drop(columns=['TIPO_TABLA', 'FECHA_RESCATE_DT_TMP'], errors='ignore')
+                df_bajas_raw = df_bajas_raw.drop(columns=['TIPO_TABLA', 'FECHA_RESCATE_DT_TMP'], errors='ignore')
+            else:
+                df_rescates_raw = df_resc_temp
+                df_bajas_raw = df_baj_temp
         
             # Filtros por defecto desde la última base percapita
             def_anio = int(dem_info.get('max_anio_percapita', datetime.now().year))
